@@ -269,43 +269,43 @@ The optimization engine solves an exact continuous Linear Program over a 24-hour
 ### Objective Function
 Minimize total electricity purchase cost from the utility grid:
 
-$$\min \sum_{h=0}^{23} \text{grid\_kwh}[h] \times \text{tariff\_bdt\_per\_kwh}[h]$$
+$$\min \sum_{h=0}^{23} \text{grid}[h] \times \text{tariff}[h]$$
 
 ### Physical Invariants & Constraints
 
 1. **Hourly Energy Balance**:
    For every hour $h \in \{0, \dots, 23\}$, total energy supplied must equal total energy consumed:
-   $$\text{grid\_kwh}[h] + \text{solar\_used\_kwh}[h] + \text{discharge\_kwh}[h] = \text{demand\_kwh}[h] + \text{charge\_kwh}[h]$$
+   $$\text{grid}[h] + \text{solar-used}[h] + \text{discharge}[h] = \text{demand}[h] + \text{charge}[h]$$
 
 2. **Solar Utilization & Curtailment**:
-   Solar consumption cannot exceed the effective solar generation after applying operational reductions. Grid export of solar energy is prohibited:
-   $$0 \le \text{solar\_used\_kwh}[h] \le \text{effective\_solar}[h]$$
-   where $\text{effective\_solar}[h] = \text{solar\_kwh}[h] \times \text{factor}[h]$.
+   Solar consumption cannot exceed effective solar generation after applying operational reductions. Grid export of solar energy is prohibited:
+   $$0 \le \text{solar-used}[h] \le \text{effective-solar}[h]$$
+   where $\text{effective-solar}[h] = \text{solar}[h] \times \text{factor}[h]$.
 
 3. **Battery Storage Transition Dynamics**:
    The battery state of charge (SoC) updates continuously each hour:
-   $$E[h] = E[h-1] + \text{charge\_kwh}[h] - \text{discharge\_kwh}[h]$$
-   with boundary condition $E[-1] = \text{initial\_energy\_kwh}$.
+   $$E[h] = E[h-1] + \text{charge}[h] - \text{discharge}[h]$$
+   with boundary condition $E[-1] = E_{\text{initial}}$.
 
 4. **Storage Bounds & Reserve Floor**:
    The stored energy at each hour must remain within allowable limits:
-   $$\max(\text{minimum\_energy\_kwh}, \text{directive\_reserve}[h]) \le E[h] \le \text{capacity\_kwh}$$
+   $$\max(E_{\min}, E_{\text{reserve}}[h]) \le E[h] \le E_{\max}$$
 
 5. **Hourly Inverter Transfer Limits**:
    Battery charging and discharging are bounded by inverter throughput ratings:
-   $$0 \le \text{charge\_kwh}[h] \le \text{max\_charge\_kwh\_per\_hour}$$
-   $$0 \le \text{discharge\_kwh}[h] \le \text{max\_discharge\_kwh\_per\_hour}$$
+   $$0 \le \text{charge}[h] \le P_{\text{charge-max}}$$
+   $$0 \le \text{discharge}[h] \le P_{\text{discharge-max}}$$
 
 6. **Mutual Exclusivity**:
    A battery cannot charge and discharge simultaneously in the same hour. This is naturally enforced by the positive cost of grid electricity and solar availability.
 
 7. **Grid Import Ceiling**:
    When substation maintenance or transformer limits are active:
-   $$\text{grid\_kwh}[h] \le \text{max\_grid\_kwh}[h]$$
+   $$\text{grid}[h] \le \text{grid-max}[h]$$
 
 8. **End-of-Day Neutrality**:
    The final energy stored at the end of the dispatch period must equal the initial stored energy:
-   $$E[23] = \text{initial\_energy\_kwh}$$
+   $$E[23] = E_{\text{initial}}$$
    This guarantees that the optimization does not deplete the battery without replenishing it for the following day.
 
 ---
@@ -317,10 +317,10 @@ The cognitive pipeline standardizes all operator shift notes into six machine-ve
 | Directive Type | Applies | Structured Adjustment Fields | Description & Operational Semantics |
 | :--- | :--- | :--- | :--- |
 | `solar_reduction` | `true` | `hours: int[]`<br>`factor: float` | Models panel cleaning, dust storms, shading, or inverter outages. `factor` represents the **usable fraction remaining** ($0.0 \le \text{factor} \le 1.0$). An 80% reduction sets `factor = 0.20`. "Solar drops to 25%" sets `factor = 0.25`. |
-| `minimum_battery_reserve` | `true` | `hours: int[]`<br>`minimum_energy_kwh: float` | Enforces an elevated battery reserve floor during critical periods (e.g. VIP visits, convocation, storm warnings). Percentage inputs are converted as $\text{percentage} \times \text{capacity\_kwh}$. |
-| `no_charge_window` | `true` | `hours: int[]` | Prohibits battery charging during specified hours ($\text{battery\_action} \ne \text{"charge"}$, $\text{charge\_kwh} = 0$). Used for charger circuit inspection or thermal cooldown. |
-| `no_discharge_window` | `true` | `hours: int[]` | Prohibits battery discharging during specified hours ($\text{battery\_action} \ne \text{"discharge"}$, $\text{discharge\_kwh} = 0$). Used during protection relay testing or maintenance. |
-| `max_grid_window` | `true` | `hours: int[]`<br>`max_grid_kwh: float` | Limits campus grid electricity intake ($\text{grid\_kwh}[h] \le \text{max\_grid\_kwh}$) to protect local transformers or adhere to utility demand response requests. |
+| `minimum_battery_reserve` | `true` | `hours: int[]`<br>`minimum_energy_kwh: float` | Enforces an elevated battery reserve floor during critical periods (e.g. VIP visits, convocation, storm warnings). Percentage inputs are converted as `percentage × capacity_kwh`. |
+| `no_charge_window` | `true` | `hours: int[]` | Prohibits battery charging during specified hours (`battery_action != "charge"`, `charge = 0`). Used for charger circuit inspection or thermal cooldown. |
+| `no_discharge_window` | `true` | `hours: int[]` | Prohibits battery discharging during specified hours (`battery_action != "discharge"`, `discharge = 0`). Used during protection relay testing or maintenance. |
+| `max_grid_window` | `true` | `hours: int[]`<br>`max_grid_kwh: float` | Limits campus grid electricity intake (`grid[h] <= max_grid_kwh`) to protect local transformers or adhere to utility demand response requests. |
 | `no_op` | `false` | `null` | Applied to irrelevant notices, administrative reminders, or non-actionable announcements (e.g. sports registration, visitor parking rules, cafeteria hours). |
 
 ---
