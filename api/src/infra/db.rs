@@ -15,14 +15,13 @@ pub struct Item {
     pub updated_at: DateTime<Utc>,
 }
 
-pub async fn init_pool(database_url: &str) -> Result<PgPool, AppError> {
+pub fn init_pool(database_url: &str) -> Result<PgPool, AppError> {
     PgPoolOptions::new()
         .max_connections(20)
-        .min_connections(5)
+        .min_connections(1)
         .acquire_timeout(Duration::from_secs(3))
         .idle_timeout(Duration::from_secs(600))
-        .connect(database_url)
-        .await
+        .connect_lazy(database_url)
         .map_err(AppError::Database)
 }
 

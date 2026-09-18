@@ -7,8 +7,8 @@ use std::{sync::Arc, time::Instant};
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
-    pub redis: ConnectionManager,
-    pub nats: NatsClient,
+    pub redis: Option<ConnectionManager>,
+    pub nats: Option<NatsClient>,
     pub s3: S3Service,
     pub rtc_hub: Arc<RtcHub>,
     pub config: Arc<Config>,
@@ -16,10 +16,10 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub async fn new(
+    pub fn new(
         db: PgPool,
-        redis: ConnectionManager,
-        nats: NatsClient,
+        redis: Option<ConnectionManager>,
+        nats: Option<NatsClient>,
         s3: S3Service,
         config: Config,
     ) -> Self {

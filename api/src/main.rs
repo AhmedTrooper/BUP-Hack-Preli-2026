@@ -17,17 +17,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Connecting to PostgreSQL database at: {}",
         config.database_url
     );
-    let pool = infra::init_pool(&config.database_url).await?;
-    infra::init_schema(&pool).await?;
-    tracing::info!("PostgreSQL connected and schema verified.");
+    let pool = infra::init_pool(&config.database_url)?;
+    if let Err(e) = infra::init_schema(&pool).await {
+        tracing::warn!(
+            "Postgres schema init deferred (will retry on query): {:?}",
+            e
+        );
+    } else {
+        tracing::info!("PostgreSQL connected and schema verified.");
+    }
 
     tracing::info!("Connecting to Redis at: {}", config.redis_url);
-    let redis_conn = infra::init_redis(&config.redis_url).await?;
-    tracing::info!("Redis connection manager established.");
+    let redis_conn = match infra::init_redis(&config.redis_url).await {
+        Ok(c) => {
+            tracing::info!("Redis connection manager established.");
+            Some(c)
+        }
+        Err(e) => {
+            tracing::warn!(
+                "Redis connection failed (non-fatal, caching disabled): {:?}",
+                e
+            );
+            None
+        }
+    };
 
     tracing::info!("Connecting to NATS at: {}", config.nats_url);
-    let nats_client = infra::init_nats(&config.nats_url).await?;
-    tracing::info!("NATS client connected.");
+    let nats_client = match infra::init_nats(&config.nats_url).await {
+        Ok(c) => {
+            tracing::info!("NATS client connected.");
+            Some(c)
+        }
+        Err(e) => {
+            tracing::warn!(
+                "NATS connection failed (non-fatal, pubsub disabled): {:?}",
+                e
+            );
+            None
+        }
+    };
 
     tracing::info!(
         "Initializing S3 object storage (bucket: {})...",
@@ -43,7 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         tracing::info!("S3 bucket ready: {}", config.s3_bucket);
     }
 
-    let app_state = AppState::new(pool, redis_conn, nats_client, s3_service, config.clone()).await;
+    let app_state = AppState::new(pool, redis_conn, nats_client, s3_service, config.clone());
     let router = create_router(app_state.clone());
 
     let (shutdown_tx, shutdown_rx) = watch::channel(false);

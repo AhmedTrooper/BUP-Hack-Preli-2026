@@ -24,10 +24,8 @@ pub fn validate_and_normalize_directive(interp: &mut DirectiveInterpretation, ca
         return;
     }
 
-    interp.applies = true;
-
     if let Some(adj) = &mut interp.structured_adjustment {
-        if let Some(hours) = &mut adj.hours {
+        let has_valid_hours = if let Some(hours) = &mut adj.hours {
             let mut unique_hours = BTreeSet::new();
             for &h in hours.iter() {
                 if h < 24 {
@@ -35,27 +33,51 @@ pub fn validate_and_normalize_directive(interp: &mut DirectiveInterpretation, ca
                 }
             }
             *hours = unique_hours.into_iter().collect();
+            !hours.is_empty()
+        } else {
+            false
+        };
+
+        if !has_valid_hours {
+            interp.directive_type = "no_op".to_string();
+            interp.applies = false;
+            interp.structured_adjustment = None;
+            return;
         }
+
+        interp.applies = true;
 
         match interp.directive_type.as_str() {
             "solar_reduction" => {
-                let factor = adj.factor.unwrap_or(1.0).clamp(0.0, 1.0);
-                adj.factor = Some(factor);
+                let Some(factor) = adj.factor else {
+                    interp.directive_type = "no_op".to_string();
+                    interp.applies = false;
+                    interp.structured_adjustment = None;
+                    return;
+                };
+                adj.factor = Some(factor.clamp(0.0, 1.0));
                 adj.minimum_energy_kwh = None;
                 adj.max_grid_kwh = None;
             }
             "minimum_battery_reserve" => {
-                let min_energy = adj
-                    .minimum_energy_kwh
-                    .unwrap_or(0.0)
-                    .clamp(0.0, capacity_kwh);
-                adj.minimum_energy_kwh = Some(min_energy);
+                let Some(min_energy) = adj.minimum_energy_kwh else {
+                    interp.directive_type = "no_op".to_string();
+                    interp.applies = false;
+                    interp.structured_adjustment = None;
+                    return;
+                };
+                adj.minimum_energy_kwh = Some(min_energy.clamp(0.0, capacity_kwh));
                 adj.factor = None;
                 adj.max_grid_kwh = None;
             }
             "max_grid_window" => {
-                let max_grid = adj.max_grid_kwh.unwrap_or(f64::INFINITY).max(0.0);
-                adj.max_grid_kwh = Some(max_grid);
+                let Some(max_grid) = adj.max_grid_kwh else {
+                    interp.directive_type = "no_op".to_string();
+                    interp.applies = false;
+                    interp.structured_adjustment = None;
+                    return;
+                };
+                adj.max_grid_kwh = Some(max_grid.max(0.0));
                 adj.factor = None;
                 adj.minimum_energy_kwh = None;
             }
@@ -64,7 +86,11 @@ pub fn validate_and_normalize_directive(interp: &mut DirectiveInterpretation, ca
                 adj.minimum_energy_kwh = None;
                 adj.max_grid_kwh = None;
             }
-            _ => {}
+            _ => {
+                interp.directive_type = "no_op".to_string();
+                interp.applies = false;
+                interp.structured_adjustment = None;
+            }
         }
     } else {
         interp.directive_type = "no_op".to_string();
@@ -84,7 +110,13 @@ fn parse_hour_str(s: &str) -> Option<u8> {
     let is_pm = lower.contains("pm");
     let is_am = lower.contains("am");
 
-    let num_str: String = lower.chars().filter(|c| c.is_ascii_digit()).collect();
+    let hour_part = if let Some((h_str, _)) = lower.split_once(':') {
+        h_str
+    } else {
+        &lower
+    };
+
+    let num_str: String = hour_part.chars().filter(|c| c.is_ascii_digit()).collect();
     if let Ok(mut h) = num_str.parse::<u8>() {
         if is_pm && h < 12 {
             h += 12;
@@ -99,9 +131,10 @@ fn parse_hour_str(s: &str) -> Option<u8> {
 }
 
 pub fn extract_hours_from_note(note: &str) -> Vec<u8> {
-    let lower = note.to_lowercase();
+    let normalized = note.replace(['–', '—'], "-");
+    let lower = normalized.to_lowercase();
 
-    let delimiters = ["until", "to", "and", "-"];
+    let delimiters = ["until", "through", "to", "and", "-"];
     let prefix_markers = ["from", "between", "during"];
 
     for prefix in prefix_markers {
@@ -109,11 +142,14 @@ pub fn extract_hours_from_note(note: &str) -> Vec<u8> {
             let after_prefix = &lower[start_idx + prefix.len()..];
             for delim in delimiters {
                 if let Some(delim_idx) = after_prefix.find(delim) {
-                    let first_part = &after_prefix[..delim_idx].trim();
+                    let first_part = after_prefix[..delim_idx].trim();
                     let second_part_raw = &after_prefix[delim_idx + delim.len()..];
                     let clean_words: Vec<String> = second_part_raw
                         .split_whitespace()
-                        .map(|w| w.trim_matches(|c: char| !c.is_alphanumeric()).to_string())
+                        .map(|w| {
+                            w.trim_matches(|c: char| !c.is_alphanumeric() && c != ':')
+                                .to_string()
+                        })
                         .filter(|w| !w.is_empty())
                         .collect();
                     if clean_words.is_empty() {
@@ -362,6 +398,53 @@ mod tests {
             explanation: "test".to_string(),
         };
         validate_and_normalize_directive(&mut interp, 200.0);
+        assert!(!interp.applies);
+        assert!(interp.structured_adjustment.is_none());
+    }
+
+    #[test]
+    fn test_extract_hours_colon_and_dash() {
+        let note = "Panel cleaning between 11:00 AM – 1:00 PM.";
+        let hours = extract_hours_from_note(note);
+        assert_eq!(hours, vec![11, 12]);
+    }
+
+    #[test]
+    fn test_empty_hours_downgrade_to_no_op() {
+        let mut interp = DirectiveInterpretation {
+            note_index: 0,
+            applies: true,
+            directive_type: "solar_reduction".to_string(),
+            structured_adjustment: Some(StructuredAdjustment {
+                hours: Some(vec![]),
+                factor: Some(0.5),
+                minimum_energy_kwh: None,
+                max_grid_kwh: None,
+            }),
+            explanation: "test".to_string(),
+        };
+        validate_and_normalize_directive(&mut interp, 100.0);
+        assert_eq!(interp.directive_type, "no_op");
+        assert!(!interp.applies);
+        assert!(interp.structured_adjustment.is_none());
+    }
+
+    #[test]
+    fn test_missing_factor_downgrade_to_no_op() {
+        let mut interp = DirectiveInterpretation {
+            note_index: 0,
+            applies: true,
+            directive_type: "solar_reduction".to_string(),
+            structured_adjustment: Some(StructuredAdjustment {
+                hours: Some(vec![12, 13]),
+                factor: None,
+                minimum_energy_kwh: None,
+                max_grid_kwh: None,
+            }),
+            explanation: "test".to_string(),
+        };
+        validate_and_normalize_directive(&mut interp, 100.0);
+        assert_eq!(interp.directive_type, "no_op");
         assert!(!interp.applies);
         assert!(interp.structured_adjustment.is_none());
     }

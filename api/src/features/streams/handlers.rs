@@ -29,7 +29,10 @@ pub async fn publish_stream_handler(
     }
 
     let stream_name = req.stream.unwrap_or_else(|| "hackathon:events".to_string());
-    let mut conn = state.redis.clone();
+    let mut conn = state
+        .redis
+        .clone()
+        .ok_or_else(|| AppError::Internal("Redis stream is not available".to_string()))?;
 
     let event_id =
         redis_client::publish_stream_event(&mut conn, &stream_name, &req.event_type, &req.payload)

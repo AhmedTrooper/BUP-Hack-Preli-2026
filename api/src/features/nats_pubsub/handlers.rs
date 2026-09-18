@@ -25,7 +25,12 @@ pub async fn nats_publish_handler(
         return Err(AppError::BadRequest("Subject cannot be empty".to_string()));
     }
 
-    nats_client::publish_message(&state.nats, &req.subject, &req.message).await?;
+    let nats = state
+        .nats
+        .as_ref()
+        .ok_or_else(|| AppError::Internal("NATS messaging is not available".to_string()))?;
+
+    nats_client::publish_message(nats, &req.subject, &req.message).await?;
 
     Ok((
         StatusCode::OK,

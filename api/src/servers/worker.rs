@@ -7,13 +7,21 @@ use tokio::sync::watch;
 pub fn spawn_background_workers(state: &AppState, shutdown_rx: watch::Receiver<bool>) {
     tracing::info!("⚙️ Initializing background worker server...");
 
-    redis_client::spawn_stream_worker(
-        state.redis.clone(),
-        "hackathon:events".to_string(),
-        shutdown_rx.clone(),
-    );
+    if let Some(redis) = state.redis.clone() {
+        redis_client::spawn_stream_worker(
+            redis,
+            "hackathon:events".to_string(),
+            shutdown_rx.clone(),
+        );
+    } else {
+        tracing::info!("Redis stream worker skipped (Redis not connected).");
+    }
 
-    nats_client::spawn_nats_subscriber(state.nats.clone(), "hackathon.>".to_string(), shutdown_rx);
+    if let Some(nats) = state.nats.clone() {
+        nats_client::spawn_nats_subscriber(nats, "hackathon.>".to_string(), shutdown_rx);
+    } else {
+        tracing::info!("NATS subscriber worker skipped (NATS not connected).");
+    }
 
-    tracing::info!("✅ All background daemons running.");
+    tracing::info!("✅ All active background daemons running.");
 }

@@ -4,14 +4,8 @@ use crate::{
         dto::DirectiveInterpretation,
         guardrails::{fallback_extract_directive, validate_and_normalize_directive},
     },
+    infra::complete_prompt,
 };
-use rig_core::{
-    client::CompletionClient,
-    completion::{AssistantContent, CompletionModel},
-    providers::{anthropic, deepseek, gemini, openai},
-};
-use std::time::Duration;
-use tokio::time::timeout;
 
 const SYSTEM_PROMPT: &str = r#"You are an expert energy grid operator and directive interpreter for the GridWise system.
 Given a battery capacity (in kWh) and a list of operator notes (0-indexed), interpret each note into a structured JSON directive.
@@ -59,67 +53,6 @@ Return ONLY a valid JSON array of directive objects matching this schema:
 No markdown formatting, no code fences.
 "#;
 
-async fn query_provider(
-    provider: &str,
-    model: &str,
-    api_key: &str,
-    user_prompt: &str,
-) -> Result<String, String> {
-    let response_text = match provider {
-        "gemini" => {
-            let client = gemini::Client::new(api_key).map_err(|e| e.to_string())?;
-            let model = client.completion_model(model);
-            let req = model
-                .completion_request(user_prompt)
-                .preamble(SYSTEM_PROMPT.to_string())
-                .build();
-            let resp = model.completion(req).await.map_err(|e| e.to_string())?;
-            extract_text(resp.choice)
-        }
-        "anthropic" => {
-            let client = anthropic::Client::new(api_key).map_err(|e| e.to_string())?;
-            let model = client.completion_model(model);
-            let req = model
-                .completion_request(user_prompt)
-                .preamble(SYSTEM_PROMPT.to_string())
-                .build();
-            let resp = model.completion(req).await.map_err(|e| e.to_string())?;
-            extract_text(resp.choice)
-        }
-        "deepseek" => {
-            let client = deepseek::Client::new(api_key).map_err(|e| e.to_string())?;
-            let model = client.completion_model(model);
-            let req = model
-                .completion_request(user_prompt)
-                .preamble(SYSTEM_PROMPT.to_string())
-                .build();
-            let resp = model.completion(req).await.map_err(|e| e.to_string())?;
-            extract_text(resp.choice)
-        }
-        _ => {
-            let client = openai::Client::new(api_key).map_err(|e| e.to_string())?;
-            let model = client.completion_model(model);
-            let req = model
-                .completion_request(user_prompt)
-                .preamble(SYSTEM_PROMPT.to_string())
-                .build();
-            let resp = model.completion(req).await.map_err(|e| e.to_string())?;
-            extract_text(resp.choice)
-        }
-    };
-    Ok(response_text)
-}
-
-fn extract_text(choice: Vec<AssistantContent>) -> String {
-    let mut out = String::new();
-    for item in choice {
-        if let AssistantContent::Text(t) = item {
-            out.push_str(&t.text);
-        }
-    }
-    out
-}
-
 pub async fn interpret_notes_with_llm(
     notes: &[String],
     capacity_kwh: f64,
@@ -139,12 +72,8 @@ pub async fn interpret_notes_with_llm(
                 .join("\n")
         );
 
-        let provider = config.llm_provider.trim().to_lowercase();
-        let model = config.llm_model.trim();
-
-        let query_call = query_provider(&provider, model, api_key, &user_prompt);
-
-        if let Ok(Ok(response_text)) = timeout(Duration::from_secs(10), query_call).await
+        if let Ok(response_text) =
+            complete_prompt(config, Some(SYSTEM_PROMPT), &user_prompt, Some(0.0)).await
             && let Some(mut parsed) = parse_llm_json_response(&response_text)
             && parsed.len() == notes.len()
         {

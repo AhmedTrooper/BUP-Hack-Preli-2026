@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AiGenerateRequest {
     pub prompt: String,
+    pub system_prompt: Option<String>,
     pub model: Option<String>,
     pub temperature: Option<f32>,
 }

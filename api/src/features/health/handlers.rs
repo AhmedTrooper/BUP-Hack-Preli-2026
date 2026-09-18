@@ -59,21 +59,28 @@ pub async fn readiness_handler(State(state): State<AppState>) -> impl IntoRespon
         }
     };
 
-    let mut redis_conn = state.redis.clone();
-    let redis_status = match redis::cmd("PING")
-        .query_async::<String>(&mut redis_conn)
-        .await
-    {
-        Ok(_) => "connected",
-        Err(e) => {
-            tracing::warn!("Redis readiness check failed: {:?}", e);
-            "disconnected"
+    let redis_status = if let Some(mut redis_conn) = state.redis.clone() {
+        match redis::cmd("PING")
+            .query_async::<String>(&mut redis_conn)
+            .await
+        {
+            Ok(_) => "connected",
+            Err(e) => {
+                tracing::warn!("Redis readiness check failed: {:?}", e);
+                "disconnected"
+            }
         }
+    } else {
+        "disabled"
     };
 
-    let nats_status = match state.nats.connection_state() {
-        async_nats::connection::State::Connected => "connected",
-        _ => "disconnected",
+    let nats_status = if let Some(nats) = &state.nats {
+        match nats.connection_state() {
+            async_nats::connection::State::Connected => "connected",
+            _ => "disconnected",
+        }
+    } else {
+        "disabled"
     };
 
     let s3_status = match state.s3.ensure_bucket(&state.s3.default_bucket).await {
