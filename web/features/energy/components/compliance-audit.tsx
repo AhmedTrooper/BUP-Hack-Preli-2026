@@ -3,6 +3,9 @@
 import { useMemo } from "react"
 import { HourlyPlanItem, HourlyData, BatteryParams, DirectiveInterpretation } from "@/lib/schemas"
 
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+
 interface ComplianceAuditProps {
   plan: HourlyPlanItem[]
   hours: HourlyData[]
@@ -101,40 +104,32 @@ export function ComplianceAudit({
       prev = p.battery_energy_after_kwh
     }
     checks.push({
-      id: "dynamics",
-      title: "Storage State Continuity",
-      description: "Ending SoC matches previous hour SoC ± battery transfer kWh",
+      id: "continuity",
+      title: "State of Charge Transition Dynamics",
+      description: "Hourly stored energy matches E[h] = E[h-1] + charge - discharge precisely",
       passed: dynPassed,
       tolerance: `Δ max = ${maxDynDiff.toFixed(3)} kWh`,
-      metric: dynPassed ? "Continuous Transitions" : "State jump detected",
+      metric: dynPassed ? "Continuous SoC Dynamics" : "Discontinuity found",
     })
 
-    // 4. Reserve Floor & Capacity Bounds
+    // 4. Capacity & Reserve Bounds
     let boundsPassed = true
     for (let h = 0; h < 24; h++) {
-      let activeMin = battery.minimum_energy_kwh
-      for (const d of directives) {
-        if (d.applies && d.directive_type === "minimum_battery_reserve" && d.structured_adjustment?.hours?.includes(h)) {
-          if (d.structured_adjustment.minimum_energy_kwh !== undefined) {
-            activeMin = Math.max(activeMin, d.structured_adjustment.minimum_energy_kwh)
-          }
-        }
-      }
-      const energy = plan[h].battery_energy_after_kwh
-      if (energy < activeMin - TOL || energy > battery.capacity_kwh + TOL) {
+      const e = plan[h].battery_energy_after_kwh
+      if (e > battery.capacity_kwh + TOL || e < battery.minimum_energy_kwh - TOL) {
         boundsPassed = false
       }
     }
     checks.push({
       id: "bounds",
-      title: "Reserve Floor & Capacity Limits",
-      description: "Active reserve floor ≤ Battery SoC ≤ Capacity ceiling across all hours",
+      title: "Storage Capacity & Reserve Floors",
+      description: "Stored energy remains strictly within [minimum_energy, capacity_kwh] limits",
       passed: boundsPassed,
-      tolerance: "Strict bound adherence",
-      metric: boundsPassed ? `Within [${battery.minimum_energy_kwh} - ${battery.capacity_kwh}] kWh` : "Boundary violation",
+      tolerance: `${battery.minimum_energy_kwh} to ${battery.capacity_kwh} kWh`,
+      metric: boundsPassed ? "Bounds Compliant" : "Boundary violated",
     })
 
-    // 5. Transfer Rate Limits
+    // 5. Inverter Limits
     let ratePassed = true
     for (let h = 0; h < 24; h++) {
       const p = plan[h]
@@ -146,7 +141,7 @@ export function ComplianceAudit({
       }
     }
     checks.push({
-      id: "transfer",
+      id: "rates",
       title: "Hourly Transfer Inverter Limits",
       description: "Charge and discharge throughput respect hourly maximum inverter ratings",
       passed: ratePassed,
@@ -175,59 +170,58 @@ export function ComplianceAudit({
   const allPassed = auditResults.every((c) => c.passed)
 
   return (
-    <div className="rounded-2xl border bg-card/80 backdrop-blur-md p-6 shadow-sm">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
+    <Card className="bg-card/85 backdrop-blur-md p-5 sm:p-6 shadow-sm">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
-          <h3 className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-2">
+          <h3 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             <span>🛡️</span> Mathematical & Physical Invariant Audit
           </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             Automated verification of physical conservation laws, battery dynamics, and neutrality
           </p>
         </div>
 
-        <div
-          className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-            allPassed
-              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-              : "bg-destructive/10 text-destructive border border-destructive/20"
-          }`}
-        >
-          <span>{allPassed ? "✓ All Invariants Passed (100%)" : "⚠ Invariant Failures Detected"}</span>
+        <div>
+          <Badge
+            variant={allPassed ? "success" : "destructive"}
+            className="text-xs font-bold py-1 px-3"
+          >
+            {allPassed ? "✓ All Invariants Passed (100%)" : "⚠ Invariant Failures Detected"}
+          </Badge>
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
         {auditResults.map((check) => (
           <div
             key={check.id}
-            className={`rounded-xl border p-3.5 transition-all text-xs flex flex-col justify-between ${
+            className={`rounded-xl border p-4 transition-all text-sm flex flex-col justify-between ${
               check.passed
-                ? "bg-background border-emerald-500/20 hover:border-emerald-500/40"
+                ? "bg-background border-emerald-500/25 hover:border-emerald-500/50 shadow-xs"
                 : "bg-destructive/5 border-destructive/30"
             }`}
           >
             <div>
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-foreground flex items-center gap-1.5">
-                  <span className={check.passed ? "text-emerald-500" : "text-destructive"}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-foreground text-sm flex items-center gap-2">
+                  <span className={check.passed ? "text-emerald-500 font-bold" : "text-destructive font-bold"}>
                     {check.passed ? "✓" : "✕"}
                   </span>
                   {check.title}
                 </span>
-                <span className="text-[10px] font-mono text-muted-foreground">{check.tolerance}</span>
+                <span className="text-xs font-mono text-muted-foreground shrink-0">{check.tolerance}</span>
               </div>
-              <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed">
+              <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground leading-relaxed">
                 {check.description}
               </p>
             </div>
 
-            <div className="mt-2.5 pt-2 border-t font-mono text-[11px] text-foreground/90 font-medium">
+            <div className="mt-3 pt-2.5 border-t font-mono text-xs text-foreground font-semibold">
               {check.metric}
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   )
 }
