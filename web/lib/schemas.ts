@@ -1,151 +1,71 @@
 import { z } from "zod"
 
-export const ServiceStatusSchema = z.object({
-  postgres: z.string(),
-  redis: z.string(),
-  nats: z.string(),
-  s3: z.string(),
-})
-
-export const ReadinessResponseSchema = z.object({
+export const HealthResponseSchema = z.object({
   status: z.string(),
-  services: ServiceStatusStatusSchemaOptional(ServiceStatusSchema),
-  uptime_seconds: z.number(),
 })
 
-function ServiceStatusStatusSchemaOptional(schema: typeof ServiceStatusSchema) {
-  return schema
-}
-
-export const ItemSchema = z.object({
-  id: z.string().uuid(),
-  title: z.string().min(1, "Title is required"),
-  content: z.string().nullable().optional(),
-  tags: z.array(z.string()).default([]),
-  created_at: z.string(),
-  updated_at: z.string(),
+export const HourlyDataSchema = z.object({
+  hour: z.number().int().min(0).max(23),
+  demand_kwh: z.number().nonnegative(),
+  solar_kwh: z.number().nonnegative(),
+  tariff_bdt_per_kwh: z.number().nonnegative(),
 })
 
-export const CreateItemSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  content: z.string().optional(),
-  tags: z.array(z.string()).default([]),
+export const BatteryParamsSchema = z.object({
+  capacity_kwh: z.number().positive(),
+  initial_energy_kwh: z.number().nonnegative(),
+  minimum_energy_kwh: z.number().nonnegative(),
+  max_charge_kwh_per_hour: z.number().positive(),
+  max_discharge_kwh_per_hour: z.number().positive(),
 })
 
-export const UpdateItemSchema = z.object({
-  title: z.string().optional(),
-  content: z.string().optional(),
-  tags: z.array(z.string()).optional(),
+export const OptimizeEnergyRequestSchema = z.object({
+  scenario_id: z.string().min(1, "Scenario ID is required"),
+  operator_notes: z.array(z.string().min(1)).min(1).max(3),
+  hours: z.array(HourlyDataSchema).length(24),
+  battery: BatteryParamsSchema,
 })
 
-export const SetCacheSchema = z.object({
-  key: z.string().min(1, "Key is required"),
-  value: z.string().min(1, "Value is required"),
-  ttl_seconds: z.number().positive().optional(),
+export const StructuredAdjustmentSchema = z
+  .object({
+    hours: z.array(z.number().int()).optional(),
+    factor: z.number().optional(),
+    minimum_energy_kwh: z.number().optional(),
+    max_grid_kwh: z.number().optional(),
+  })
+  .nullable()
+
+export const DirectiveInterpretationSchema = z.object({
+  note_index: z.number().int(),
+  applies: z.boolean(),
+  directive_type: z.string(),
+  structured_adjustment: StructuredAdjustmentSchema,
+  explanation: z.string(),
 })
 
-export const PublishStreamSchema = z.object({
-  stream: z.string().optional(),
-  event_type: z.string().min(1, "Event type is required"),
-  payload: z.string().min(1, "Payload is required"),
+export const HourlyPlanItemSchema = z.object({
+  hour: z.number().int(),
+  grid_kwh: z.number(),
+  solar_used_kwh: z.number(),
+  battery_action: z.enum(["charge", "discharge", "idle"]),
+  battery_kwh: z.number(),
+  battery_energy_after_kwh: z.number(),
 })
 
-export const NatsPublishSchema = z.object({
-  subject: z.string().min(1, "Subject is required"),
-  message: z.string().min(1, "Message is required"),
+export const OptimizeEnergyResponseSchema = z.object({
+  scenario_id: z.string(),
+  directive_interpretation: z.array(DirectiveInterpretationSchema),
+  hourly_plan: z.array(HourlyPlanItemSchema),
+  total_grid_kwh: z.number(),
+  total_cost_bdt: z.number(),
+  peak_grid_kwh: z.number(),
+  plan_summary: z.string(),
 })
 
-export const UploadResponseSchema = z.object({
-  key: z.string(),
-  bucket: z.string(),
-  size: z.number(),
-})
-
-export const PresignedUrlResponseSchema = z.object({
-  key: z.string(),
-  url: z.string().url(),
-  expires_in_seconds: z.number(),
-})
-
-export const SignalingMessageSchema = z.discriminatedUnion("type", [
-  z.object({
-    type: z.literal("join"),
-    payload: z.object({ room_id: z.string(), peer_id: z.string() }),
-  }),
-  z.object({
-    type: z.literal("leave"),
-    payload: z.object({ room_id: z.string(), peer_id: z.string() }),
-  }),
-  z.object({
-    type: z.literal("offer"),
-    payload: z.object({
-      room_id: z.string(),
-      from_peer: z.string(),
-      to_peer: z.string().optional(),
-      sdp: z.string(),
-    }),
-  }),
-  z.object({
-    type: z.literal("answer"),
-    payload: z.object({
-      room_id: z.string(),
-      from_peer: z.string(),
-      to_peer: z.string().optional(),
-      sdp: z.string(),
-    }),
-  }),
-  z.object({
-    type: z.literal("candidate"),
-    payload: z.object({
-      room_id: z.string(),
-      from_peer: z.string(),
-      to_peer: z.string().optional(),
-      candidate: z.string(),
-    }),
-  }),
-  z.object({
-    type: z.literal("peer_joined"),
-    payload: z.object({ room_id: z.string(), peer_id: z.string() }),
-  }),
-  z.object({
-    type: z.literal("peer_left"),
-    payload: z.object({ room_id: z.string(), peer_id: z.string() }),
-  }),
-  z.object({ type: z.literal("ping") }),
-  z.object({ type: z.literal("pong") }),
-])
-
-export const LoginRequestSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
-})
-
-export const LoginResponseSchema = z.object({
-  token: z.string(),
-  token_type: z.string(),
-  user_id: z.string(),
-  expires_in_minutes: z.number(),
-})
-
-export const AiGenerateRequestSchema = z.object({
-  prompt: z.string().min(1, "Prompt is required"),
-  model: z.string().optional(),
-  temperature: z.number().min(0).max(2).optional(),
-})
-
-export const AiGenerateResponseSchema = z.object({
-  text: z.string(),
-  model: z.string(),
-  tokens_used: z.number(),
-  execution_time_ms: z.number(),
-})
-
-export type Item = z.infer<typeof ItemSchema>
-export type CreateItemInput = z.infer<typeof CreateItemSchema>
-export type UpdateItemInput = z.infer<typeof UpdateItemSchema>
-export type ReadinessResponse = z.infer<typeof ReadinessResponseSchema>
-export type SignalingMessage = z.infer<typeof SignalingMessageSchema>
-export type LoginRequest = z.infer<typeof LoginRequestSchema>
-export type LoginResponse = z.infer<typeof LoginResponseSchema>
-export type AiGenerateRequest = z.infer<typeof AiGenerateRequestSchema>
-export type AiGenerateResponse = z.infer<typeof AiGenerateResponseSchema>
+export type HealthResponse = z.infer<typeof HealthResponseSchema>
+export type HourlyData = z.infer<typeof HourlyDataSchema>
+export type BatteryParams = z.infer<typeof BatteryParamsSchema>
+export type OptimizeEnergyRequest = z.infer<typeof OptimizeEnergyRequestSchema>
+export type DirectiveInterpretation = z.infer<typeof DirectiveInterpretationSchema>
+export type HourlyPlanItem = z.infer<typeof HourlyPlanItemSchema>
+export type OptimizeEnergyResponse = z.infer<typeof OptimizeEnergyResponseSchema>
