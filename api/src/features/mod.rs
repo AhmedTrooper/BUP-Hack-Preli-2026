@@ -1,6 +1,7 @@
 pub mod ai;
 pub mod auth;
 pub mod cache;
+pub mod energy;
 pub mod health;
 pub mod items;
 pub mod nats_pubsub;
@@ -14,6 +15,7 @@ use axum::Router;
 pub fn configure_routes(state: AppState) -> Router {
     Router::new()
         .merge(health::router())
+        .merge(energy::router())
         .merge(auth::router())
         .merge(ai::router())
         .merge(items::router())

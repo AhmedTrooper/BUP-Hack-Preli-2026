@@ -29,6 +29,9 @@ pub enum AppError {
     #[error("Bad request: {0}")]
     BadRequest(String),
 
+    #[error("Unprocessable entity: {0}")]
+    UnprocessableEntity(String),
+
     #[error("Unauthorized: {0}")]
     Unauthorized(String),
 
@@ -51,6 +54,11 @@ impl IntoResponse for AppError {
         let (status, error_code, user_message) = match &self {
             AppError::NotFound(msg) => (StatusCode::NOT_FOUND, "NOT_FOUND", msg.clone()),
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, "BAD_REQUEST", msg.clone()),
+            AppError::UnprocessableEntity(msg) => (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "UNPROCESSABLE_ENTITY",
+                msg.clone(),
+            ),
             AppError::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, "UNAUTHORIZED", msg.clone()),
             AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, "FORBIDDEN", msg.clone()),
             AppError::Database(sqlx::Error::RowNotFound) => (
@@ -134,6 +142,13 @@ mod tests {
         let err = AppError::BadRequest("Invalid body".to_string());
         let res = err.into_response();
         assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn test_unprocessable_entity_status_code() {
+        let err = AppError::UnprocessableEntity("Invalid input".to_string());
+        let res = err.into_response();
+        assert_eq!(res.status(), StatusCode::UNPROCESSABLE_ENTITY);
     }
 
     #[test]

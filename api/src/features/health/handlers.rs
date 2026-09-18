@@ -2,10 +2,24 @@ use crate::core::state::AppState;
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct HealthOkResponse {
+    pub status: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LivenessResponse {
     pub status: String,
     pub uptime_seconds: u64,
+}
+
+pub async fn health_handler() -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        Json(HealthOkResponse {
+            status: "ok".to_string(),
+        }),
+    )
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -100,6 +114,15 @@ pub async fn readiness_handler(State(state): State<AppState>) -> impl IntoRespon
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_health_ok_response_json() {
+        let resp = HealthOkResponse {
+            status: "ok".to_string(),
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        assert_eq!(json, "{\"status\":\"ok\"}");
+    }
 
     #[test]
     fn test_liveness_response_json() {

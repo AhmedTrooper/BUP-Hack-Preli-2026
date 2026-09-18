@@ -18,8 +18,8 @@ A high-performance full-stack platform built for event-driven workflows, object 
 - **Dedicated Servers Subsystem**: Decoupled HTTP/WebSocket server runners and background worker daemons.
 - **Configurable CORS Layer**: Configured via environment variable (`CORS_ALLOWED_ORIGINS`) with wildcard (`*` / `any`) and comma-separated origin parsing.
 - **Production Observability**: Leveled logging with `tracing-subscriber`, request ID propagation (`x-request-id`), timeouts, and compression.
-- **Global Error Handling**: Centralized `AppError` type converting subsystem failures into structured JSON responses without crashing or leaking secrets.
-- **Modular Vertical Slices**: Self-contained feature folders (`features/items/`, `features/storage/`, `features/rtc/`, `features/auth/`, `features/ai/`) scalable to 1,000+ files and 10,000 features.
+- **GridWise Energy Optimization Engine**: Mathematical Linear Programming solver using pure-Rust `minilp` (Simplex method) paired with multi-provider LLM directive interpretation (`rig-core` supporting OpenAI, Gemini, Anthropic, DeepSeek) and deterministic guardrails.
+- **Modular Vertical Slices**: Self-contained feature folders (`features/energy/`, `features/items/`, `features/storage/`, `features/rtc/`, `features/auth/`, `features/ai/`) scalable to 1,000+ files and 10,000 features.
 
 ### Frontend Dashboard (`web/`)
 - **Modern Interface**: Next.js 16 (App Router) with React 19.
@@ -54,6 +54,7 @@ A high-performance full-stack platform built for event-driven workflows, object 
 │       ├── servers/           # HTTP server and background worker daemon runners
 │       ├── features/          # Self-contained feature slices (handlers, DTOs, routes)
 │       │   ├── health/
+│       │   ├── energy/
 │       │   ├── auth/
 │       │   ├── ai/
 │       │   ├── items/
@@ -153,6 +154,8 @@ A high-performance full-stack platform built for event-driven workflows, object 
 | Service | Port | Local Address / Connection String |
 | :--- | :--- | :--- |
 | **API Server (Axum)** | `8080` | `http://localhost:8080` |
+| **GridWise Health** | `8080` | `GET http://localhost:8080/health` (Readiness `{"status":"ok"}`) |
+| **GridWise Optimization** | `8080` | `POST http://localhost:8080/optimize-energy` (24h LP schedule) |
 | **Web Dashboard (Next.js)** | `3000` | `http://localhost:3000` |
 | **PostgreSQL Database** | `5432` | `postgres://postgres:postgres@localhost:5432/hackathon` |
 | **Redis Server** | `6379` | `redis://localhost:6379` |

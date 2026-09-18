@@ -18,6 +18,10 @@ pub struct Config {
     pub jwt_secret: String,
     pub jwt_access_expiration_minutes: u64,
     pub jwt_refresh_expiration_days: u64,
+    pub llm_provider: String,
+    pub llm_model: String,
+    pub llm_api_key: Option<String>,
+    pub llm_base_url: Option<String>,
 }
 
 impl Config {
@@ -67,6 +71,15 @@ impl Config {
             .and_then(|v| v.parse().ok())
             .unwrap_or(7);
 
+        let llm_provider = env::var("LLM_PROVIDER").unwrap_or_else(|_| "openai".to_string());
+        let llm_model = env::var("LLM_MODEL").unwrap_or_else(|_| "gpt-4o-mini".to_string());
+        let llm_api_key = env::var("LLM_API_KEY")
+            .ok()
+            .or_else(|| env::var("OPENAI_API_KEY").ok())
+            .or_else(|| env::var("GEMINI_API_KEY").ok())
+            .or_else(|| env::var("ANTHROPIC_API_KEY").ok());
+        let llm_base_url = env::var("LLM_BASE_URL").ok();
+
         Self {
             host,
             port,
@@ -84,6 +97,10 @@ impl Config {
             jwt_secret,
             jwt_access_expiration_minutes,
             jwt_refresh_expiration_days,
+            llm_provider,
+            llm_model,
+            llm_api_key,
+            llm_base_url,
         }
     }
 }
@@ -105,5 +122,7 @@ mod tests {
         assert!(!config.cors_allowed_origins.is_empty());
         assert!(config.jwt_access_expiration_minutes <= 60);
         assert_eq!(config.jwt_access_expiration_minutes, 15);
+        assert!(!config.llm_provider.is_empty());
+        assert!(!config.llm_model.is_empty());
     }
 }
