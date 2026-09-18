@@ -182,7 +182,7 @@ export function ComplianceAudit({
             <span>🛡️</span> Mathematical & Physical Invariant Audit
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Automated verification against Section 5 & 6 of BUP Hackathon Master Specification
+            Automated verification of physical conservation laws, battery dynamics, and neutrality
           </p>
         </div>
 

@@ -1,9 +1,11 @@
 "use client"
 
 import { useEffect } from "react"
+import Link from "next/link"
 import { motion, AnimatePresence } from "motion/react"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { useAppStore } from "@/lib/store"
+import { NavigationBar } from "@/components/navigation-bar"
 import { EnergyPanel } from "@/features/energy/components/energy-panel"
 
 export default function HomePage() {
@@ -15,8 +17,7 @@ export default function HomePage() {
 }
 
 function GridWiseDashboard() {
-  const { notification, setNotification, apiConnected, apiLatencyMs, checkHealth } =
-    useAppStore()
+  const { notification, setNotification, checkHealth } = useAppStore()
 
   useEffect(() => {
     checkHealth()
@@ -52,62 +53,90 @@ function GridWiseDashboard() {
         )}
       </AnimatePresence>
 
-      <header className="border-b bg-card/50 backdrop-blur-md sticky top-0 z-40">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold shadow-xs">
-              ⚡
-            </div>
-            <div>
-              <h1 className="text-base font-bold tracking-tight text-foreground">
-                GridWise LLM
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                24-Hour Campus Energy Optimization Platform · BUP CSE FEST 2026
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div
-              className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium border ${
-                apiConnected === true
-                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                  : apiConnected === false
-                    ? "border-destructive/30 bg-destructive/10 text-destructive"
-                    : "border-muted bg-muted text-muted-foreground"
-              }`}
-            >
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  apiConnected === true
-                    ? "bg-emerald-500 animate-pulse"
-                    : apiConnected === false
-                      ? "bg-destructive"
-                      : "bg-muted-foreground"
-                }`}
-              />
-              <span>
-                {apiConnected === true
-                  ? `API Online (${apiLatencyMs}ms)`
-                  : apiConnected === false
-                    ? "API Offline"
-                    : "Checking Health..."}
-              </span>
-            </div>
-          </div>
-        </div>
-      </header>
+      <NavigationBar />
 
       <main className="mx-auto max-w-7xl px-6 py-8 space-y-8">
+        {/* Onboarding & Purpose Hero Banner */}
+        <section className="rounded-2xl border bg-gradient-to-br from-card to-muted/40 p-6 shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1.5 max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold text-primary">
+                <span>⚡</span> Enterprise Microgrid Dispatch Engine
+              </span>
+              <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                Autonomous 24-Hour Campus Energy Scheduling
+              </h2>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                GridWise automatically minimizes electricity purchase bills by arbitrating time-of-use grid tariffs, maximizing rooftop solar self-consumption, and translating natural-language maintenance logs into strict mathematical constraints.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/docs"
+                className="rounded-xl border bg-background px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-2xs"
+              >
+                📖 Platform Manual
+              </Link>
+              <Link
+                href="/docs#directives"
+                className="rounded-xl border bg-background px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-2xs"
+              >
+                ⚙️ Directives Taxonomy
+              </Link>
+            </div>
+          </div>
+
+          {/* 3 Steps Visual Guide */}
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-5 border-t border-border/60">
+            <div className="flex items-start gap-3">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary font-mono text-xs font-bold shrink-0">
+                1
+              </span>
+              <div>
+                <h4 className="text-xs font-semibold text-foreground">Select Operating Profile</h4>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Load an official campus scenario preset or customize battery capacity and limits.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary font-mono text-xs font-bold shrink-0">
+                2
+              </span>
+              <div>
+                <h4 className="text-xs font-semibold text-foreground">Review Operator Shift Notes</h4>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Inspect natural-language maintenance tickets (panel cleaning, charger outages).
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary font-mono text-xs font-bold shrink-0">
+                3
+              </span>
+              <div>
+                <h4 className="text-xs font-semibold text-foreground">Solve Optimal Dispatch</h4>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Simplex LP minimizes grid costs in &lt;50ms with 100% verified physical invariants.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Primary Energy Studio Component */}
         <section>
           <EnergyPanel />
         </section>
 
+        {/* Technical Architecture Pillar Cards */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="rounded-2xl border bg-card p-5 shadow-xs">
-            <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-              1. LLM Directive Parsing
+            <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <span>🧠</span> 1. LLM Directive Parsing
             </h3>
             <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
               Accepts 1 to 3 natural-language operator shift notes. Leverages multi-provider LLM
@@ -137,8 +166,8 @@ function GridWiseDashboard() {
           </div>
 
           <div className="rounded-2xl border bg-card p-5 shadow-xs">
-            <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-              2. Simplex LP Solver
+            <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <span>⚡</span> 2. Simplex LP Solver
             </h3>
             <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
               Constructs an exact Linear Program across the 24-hour horizon using Simplex LP.
@@ -148,8 +177,8 @@ function GridWiseDashboard() {
           </div>
 
           <div className="rounded-2xl border bg-card p-5 shadow-xs">
-            <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider">
-              3. Deterministic Invariant Replay
+            <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+              <span>🛡️</span> 3. Deterministic Invariant Replay
             </h3>
             <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
               Before returning dispatch plans, the engine independently verifies physical invariants
@@ -161,8 +190,7 @@ function GridWiseDashboard() {
       </main>
 
       <footer className="border-t py-6 text-center text-xs text-muted-foreground">
-        BUP CSE FEST 2026 Hackathon · GridWise LLM Challenge · Built with Rust, Axum, minilp &
-        Next.js
+        GridWise EMS v2.0 Enterprise · Autonomous Campus Microgrid & Energy Dispatch Platform
       </footer>
     </div>
   )
