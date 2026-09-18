@@ -56,20 +56,20 @@ function GridWiseDashboard() {
 
       <NavigationBar />
 
-      <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
+      <main className="mx-auto max-w-7xl px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Judge Telemetry & Active Backend Endpoints */}
         <section>
           <BackendTelemetryBadge />
         </section>
 
         {/* Onboarding & Purpose Hero Banner */}
-        <section className="rounded-2xl border bg-gradient-to-br from-card to-muted/40 p-6 shadow-sm">
+        <section className="rounded-2xl border bg-gradient-to-br from-card to-muted/40 p-4 sm:p-6 shadow-xs">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1.5 max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold text-primary">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] sm:text-[11px] font-bold text-primary">
                 <span>⚡</span> Enterprise Microgrid Dispatch Engine
               </span>
-              <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+              <h2 className="text-lg sm:text-2xl font-bold tracking-tight text-foreground">
                 Autonomous 24-Hour Campus Energy Scheduling
               </h2>
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -80,13 +80,13 @@ function GridWiseDashboard() {
             <div className="flex flex-wrap items-center gap-2">
               <Link
                 href="/docs"
-                className="rounded-xl border bg-background px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-2xs"
+                className="flex-1 sm:flex-initial text-center rounded-xl border bg-background px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-2xs"
               >
                 📖 Platform Manual
               </Link>
               <Link
                 href="/docs#directives"
-                className="rounded-xl border bg-background px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-2xs"
+                className="flex-1 sm:flex-initial text-center rounded-xl border bg-background px-3.5 py-2 text-xs font-semibold text-foreground hover:bg-muted transition-colors shadow-2xs"
               >
                 ⚙️ Directives Taxonomy
               </Link>
@@ -94,38 +94,38 @@ function GridWiseDashboard() {
           </div>
 
           {/* 3 Steps Visual Guide */}
-          <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-5 border-t border-border/60">
-            <div className="flex items-start gap-3">
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-4 sm:pt-5 border-t border-border/60">
+            <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-background/50 sm:bg-transparent sm:p-0 border sm:border-0">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary font-mono text-xs font-bold shrink-0">
                 1
               </span>
               <div>
                 <h4 className="text-xs font-semibold text-foreground">Select Operating Profile</h4>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
+                <p className="text-[11px] text-muted-foreground mt-0.5 leading-normal">
                   Load an official campus scenario preset or customize battery capacity and limits.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-background/50 sm:bg-transparent sm:p-0 border sm:border-0">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary font-mono text-xs font-bold shrink-0">
                 2
               </span>
               <div>
                 <h4 className="text-xs font-semibold text-foreground">Review Operator Shift Notes</h4>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
+                <p className="text-[11px] text-muted-foreground mt-0.5 leading-normal">
                   Inspect natural-language maintenance tickets (panel cleaning, charger outages).
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3">
+            <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-background/50 sm:bg-transparent sm:p-0 border sm:border-0">
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-primary font-mono text-xs font-bold shrink-0">
                 3
               </span>
               <div>
                 <h4 className="text-xs font-semibold text-foreground">Solve Optimal Dispatch</h4>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
+                <p className="text-[11px] text-muted-foreground mt-0.5 leading-normal">
                   Simplex LP minimizes grid costs in &lt;50ms with 100% verified physical invariants.
                 </p>
               </div>
@@ -137,6 +137,7 @@ function GridWiseDashboard() {
         <section>
           <EnergyPanel />
         </section>
+
 
         {/* Technical Architecture Pillar Cards */}
         <section className="grid grid-cols-1 md:grid-cols-3 gap-4">

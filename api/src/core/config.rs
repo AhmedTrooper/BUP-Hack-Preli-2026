@@ -92,7 +92,11 @@ impl Config {
         } else if let Ok(key) = env::var("GEMINI_API_KEY") {
             ("gemini".to_string(), Some(key), "gemini-2.0-flash")
         } else if let Ok(key) = env::var("ANTHROPIC_API_KEY") {
-            ("anthropic".to_string(), Some(key), "claude-3-5-haiku-latest")
+            (
+                "anthropic".to_string(),
+                Some(key),
+                "claude-3-5-haiku-latest",
+            )
         } else if let Ok(key) = env::var("GROQ_API_KEY") {
             ("groq".to_string(), Some(key), "llama-3.3-70b-versatile")
         } else if let Ok(key) = env::var("OPENAI_API_KEY") {

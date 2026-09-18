@@ -21,7 +21,7 @@ export function EnergyCharts({ plan, hours, battery }: EnergyChartsProps) {
   const activePlanData = hoveredHour !== null ? plan[hoveredHour] : null
 
   return (
-    <div className="rounded-2xl border bg-card/80 backdrop-blur-md p-6 shadow-sm">
+    <div className="rounded-2xl border bg-card/85 backdrop-blur-md p-4 sm:p-6 shadow-xs">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b pb-4">
         <div>
           <h3 className="text-sm font-semibold tracking-tight text-foreground flex items-center gap-2">
@@ -32,81 +32,91 @@ export function EnergyCharts({ plan, hours, battery }: EnergyChartsProps) {
           </p>
         </div>
 
-        <div className="flex rounded-lg border bg-muted/50 p-0.5 text-xs font-medium">
+        <div className="w-full sm:w-auto grid grid-cols-3 sm:flex rounded-lg border bg-muted/50 p-0.5 text-xs font-medium">
           <button
             type="button"
             onClick={() => setActiveTab("dispatch")}
-            className={`rounded-md px-3 py-1 transition-all cursor-pointer ${
+            className={`rounded-md px-2.5 sm:px-3 py-1 sm:py-1.5 transition-all text-center cursor-pointer text-[11px] sm:text-xs ${
               activeTab === "dispatch"
-                ? "bg-background text-foreground shadow-xs"
+                ? "bg-background text-foreground shadow-xs font-semibold"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Energy Balance
+            Balance
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("battery")}
-            className={`rounded-md px-3 py-1 transition-all cursor-pointer ${
+            className={`rounded-md px-2.5 sm:px-3 py-1 sm:py-1.5 transition-all text-center cursor-pointer text-[11px] sm:text-xs ${
               activeTab === "battery"
-                ? "bg-background text-foreground shadow-xs"
+                ? "bg-background text-foreground shadow-xs font-semibold"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Battery SoC Curve
+            SoC Curve
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("tariff")}
-            className={`rounded-md px-3 py-1 transition-all cursor-pointer ${
+            className={`rounded-md px-2.5 sm:px-3 py-1 sm:py-1.5 transition-all text-center cursor-pointer text-[11px] sm:text-xs ${
               activeTab === "tariff"
-                ? "bg-background text-foreground shadow-xs"
+                ? "bg-background text-foreground shadow-xs font-semibold"
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Tariff Arbitrage
+            Arbitrage
           </button>
         </div>
       </div>
 
-      {/* Hover Info Header Banner */}
-      <div className="mt-4 flex flex-wrap items-center justify-between rounded-lg border bg-muted/20 px-3 py-2 text-xs">
-        <div className="flex items-center gap-4">
+      {/* Hover / Tap Info Header Banner */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-muted/20 px-3 py-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <span className="font-semibold text-foreground">
-            {hoveredHour !== null ? `Hour ${String(hoveredHour).padStart(2, "0")}:00` : "Hover over any hour"}
+            {hoveredHour !== null ? `Hour ${String(hoveredHour).padStart(2, "0")}:00` : "Hourly Telemetry"}
           </span>
-          {activePlanData && activeHourData && (
-            <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono">
-              <span className="text-sky-500">Grid: {activePlanData.grid_kwh.toFixed(1)} kWh</span>
-              <span className="text-amber-500">Solar: {activePlanData.solar_used_kwh.toFixed(1)} kWh</span>
-              <span className={activePlanData.battery_action === "charge" ? "text-emerald-500" : activePlanData.battery_action === "discharge" ? "text-orange-500" : "text-muted-foreground"}>
-                Battery: {activePlanData.battery_action} ({activePlanData.battery_kwh.toFixed(1)} kWh)
+          {activePlanData && activeHourData ? (
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] sm:text-[11px] font-mono">
+              <span className="text-sky-500 font-semibold">Grid: {activePlanData.grid_kwh.toFixed(1)} kWh</span>
+              <span className="text-amber-500 font-semibold">Solar: {activePlanData.solar_used_kwh.toFixed(1)} kWh</span>
+              <span className={`font-semibold ${activePlanData.battery_action === "charge" ? "text-emerald-500" : activePlanData.battery_action === "discharge" ? "text-orange-500" : "text-muted-foreground"}`}>
+                Bat: {activePlanData.battery_action} ({activePlanData.battery_kwh.toFixed(1)} kWh)
               </span>
-              <span className="text-purple-500">Demand: {activeHourData.demand_kwh} kWh</span>
-              <span className="text-rose-500">Tariff: {activeHourData.tariff_bdt_per_kwh} BDT</span>
+              <span className="text-purple-500 font-semibold">Demand: {activeHourData.demand_kwh} kWh</span>
+              <span className="text-rose-500 font-semibold">Tariff: ৳{activeHourData.tariff_bdt_per_kwh}</span>
             </div>
+          ) : (
+            <span className="text-[11px] text-muted-foreground">
+              Hover or tap any hour bar below to inspect energy breakdown
+            </span>
           )}
         </div>
-        <div className="text-[11px] text-muted-foreground">
-          {hoveredHour === null && "Move cursor across the chart for hourly telemetry"}
-        </div>
+        {hoveredHour !== null && (
+          <button
+            type="button"
+            onClick={() => setHoveredHour(null)}
+            className="text-[10px] text-muted-foreground hover:text-foreground underline cursor-pointer"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       {/* Chart 1: Energy Balance Stacked Bars */}
       {activeTab === "dispatch" && (
         <div className="mt-4">
-          <div className="flex items-center justify-end gap-4 text-[11px] text-muted-foreground mb-2">
+          <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 sm:gap-3.5 text-[10px] sm:text-[11px] text-muted-foreground mb-2">
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-sky-500" /> Grid Import
+              <span className="h-2 w-2 rounded-full bg-sky-500" /> Grid
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-amber-500" /> Solar Used
+              <span className="h-2 w-2 rounded-full bg-amber-500" /> Solar
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-orange-500" /> Battery Discharge
+              <span className="h-2 w-2 rounded-full bg-orange-500" /> Discharge
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" /> Battery Charge
+              <span className="h-2 w-2 rounded-full bg-emerald-500" /> Charge
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-0.5 w-3 bg-purple-500 inline-block" /> Demand Target
@@ -114,7 +124,7 @@ export function EnergyCharts({ plan, hours, battery }: EnergyChartsProps) {
           </div>
 
           <div className="relative h-64 w-full pt-4">
-            <div className="absolute inset-0 flex items-end justify-between gap-1 pb-6">
+            <div className="absolute inset-0 flex items-end justify-between gap-0.5 sm:gap-1 pb-6">
               {plan.map((item) => {
                 const hourDemand = hours[item.hour]?.demand_kwh || 1
                 const demandHeight = (hourDemand / maxDemand) * 100
@@ -133,6 +143,8 @@ export function EnergyCharts({ plan, hours, battery }: EnergyChartsProps) {
                     key={item.hour}
                     onMouseEnter={() => setHoveredHour(item.hour)}
                     onMouseLeave={() => setHoveredHour(null)}
+                    onTouchStart={() => setHoveredHour(item.hour)}
+                    onClick={() => setHoveredHour(hoveredHour === item.hour ? null : item.hour)}
                     className="relative flex-1 h-full flex flex-col justify-end items-center cursor-pointer group"
                   >
                     {/* Demand target marker */}
@@ -198,18 +210,18 @@ export function EnergyCharts({ plan, hours, battery }: EnergyChartsProps) {
       {/* Chart 2: Battery State of Charge Curve */}
       {activeTab === "battery" && (
         <div className="mt-4">
-          <div className="flex items-center justify-end gap-4 text-[11px] text-muted-foreground mb-2">
+          <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 sm:gap-3.5 text-[10px] sm:text-[11px] text-muted-foreground mb-2">
             <span className="flex items-center gap-1.5">
-              <span className="h-0.5 w-3 bg-emerald-500 inline-block" /> Stored Energy (kWh)
+              <span className="h-0.5 w-3 bg-emerald-500 inline-block" /> Stored (kWh)
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-0.5 w-3 border-b-2 border-dashed border-sky-400 inline-block" /> Capacity ({battery.capacity_kwh} kWh)
+              <span className="h-0.5 w-3 border-b-2 border-dashed border-sky-400 inline-block" /> Cap ({battery.capacity_kwh}k)
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-0.5 w-3 border-b-2 border-dashed border-rose-400 inline-block" /> Base Floor ({battery.minimum_energy_kwh} kWh)
+              <span className="h-0.5 w-3 border-b-2 border-dashed border-rose-400 inline-block" /> Floor ({battery.minimum_energy_kwh}k)
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-primary" /> Neutrality Target ({battery.initial_energy_kwh} kWh)
+              <span className="h-2 w-2 rounded-full bg-primary" /> Target ({battery.initial_energy_kwh}k)
             </span>
           </div>
 
@@ -291,6 +303,8 @@ export function EnergyCharts({ plan, hours, battery }: EnergyChartsProps) {
                           strokeWidth={isHovered ? 3 : 2}
                           onMouseEnter={() => setHoveredHour(p.hour)}
                           onMouseLeave={() => setHoveredHour(null)}
+                          onTouchStart={() => setHoveredHour(p.hour)}
+                          onClick={() => setHoveredHour(hoveredHour === p.hour ? null : p.hour)}
                           className="cursor-pointer transition-all"
                         />
                       )
@@ -300,12 +314,12 @@ export function EnergyCharts({ plan, hours, battery }: EnergyChartsProps) {
               })()}
             </svg>
 
-            <div className="flex justify-between text-[10px] font-mono text-muted-foreground pt-1 px-1">
-              <span>00:00 (Start: {battery.initial_energy_kwh} kWh)</span>
+            <div className="flex justify-between text-[9px] sm:text-[10px] font-mono text-muted-foreground pt-1 px-1">
+              <span>00:00 ({battery.initial_energy_kwh}k)</span>
               <span>06:00</span>
               <span>12:00</span>
               <span>18:00</span>
-              <span>23:00 (End: {plan[23]?.battery_energy_after_kwh.toFixed(1)} kWh)</span>
+              <span>23:00 ({plan[23]?.battery_energy_after_kwh.toFixed(0)}k)</span>
             </div>
           </div>
         </div>
@@ -314,20 +328,20 @@ export function EnergyCharts({ plan, hours, battery }: EnergyChartsProps) {
       {/* Chart 3: Tariff Arbitrage Correlation */}
       {activeTab === "tariff" && (
         <div className="mt-4">
-          <div className="flex items-center justify-end gap-4 text-[11px] text-muted-foreground mb-2">
+          <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 sm:gap-3.5 text-[10px] sm:text-[11px] text-muted-foreground mb-2">
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-rose-500" /> Grid Tariff (BDT/kWh)
+              <span className="h-2 w-2 rounded-full bg-rose-500" /> Tariff (BDT)
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-sky-500" /> Grid Purchase (kWh)
+              <span className="h-2 w-2 rounded-full bg-sky-500" /> Grid Intake (kWh)
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-orange-500" /> Battery Discharge During Peak Tariff
+              <span className="h-2 w-2 rounded-full bg-orange-500" /> Peak Battery Discharge
             </span>
           </div>
 
           <div className="relative h-64 w-full pt-4">
-            <div className="absolute inset-0 flex items-end justify-between gap-1 pb-6">
+            <div className="absolute inset-0 flex items-end justify-between gap-0.5 sm:gap-1 pb-6">
               {hours.map((h) => {
                 const planItem = plan[h.hour]
                 const tariffHeight = (h.tariff_bdt_per_kwh / maxTariff) * 100
@@ -339,6 +353,8 @@ export function EnergyCharts({ plan, hours, battery }: EnergyChartsProps) {
                     key={h.hour}
                     onMouseEnter={() => setHoveredHour(h.hour)}
                     onMouseLeave={() => setHoveredHour(null)}
+                    onTouchStart={() => setHoveredHour(h.hour)}
+                    onClick={() => setHoveredHour(hoveredHour === h.hour ? null : h.hour)}
                     className="relative flex-1 h-full flex flex-col justify-end items-center cursor-pointer group"
                   >
                     {/* Tariff background bar */}
@@ -359,13 +375,13 @@ export function EnergyCharts({ plan, hours, battery }: EnergyChartsProps) {
 
                     {/* Peak badge */}
                     {h.tariff_bdt_per_kwh >= 25 && (
-                      <span className="absolute -top-1 text-[8px] font-bold text-rose-500 uppercase">
+                      <span className="absolute -top-1 text-[7px] sm:text-[8px] font-bold text-rose-500 uppercase">
                         Peak
                       </span>
                     )}
 
                     <span
-                      className={`absolute bottom-0 text-[10px] font-mono ${
+                      className={`absolute bottom-0 text-[9px] sm:text-[10px] font-mono ${
                         isHovered ? "text-primary font-bold" : "text-muted-foreground"
                       }`}
                     >

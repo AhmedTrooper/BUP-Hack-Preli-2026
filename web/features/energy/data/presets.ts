@@ -94,4 +94,44 @@ export const PRESET_SCENARIOS: PresetScenario[] = [
       },
     },
   },
+  {
+    id: "SAMPLE-04",
+    label: "Sample 04: Substation Max Grid Cap",
+    description: "Substation transformer maintenance limits grid intake to 80 kWh between 18:00 and 21:00.",
+    request: {
+      scenario_id: "SAMPLE-04",
+      operator_notes: [
+        "Substation maintenance limits campus grid import to 80 kWh between 18:00 and 21:00.",
+        "Reminder that the academic calendar for next semester has been posted on the portal.",
+      ],
+      hours: baseHours,
+      battery: {
+        capacity_kwh: 220,
+        initial_energy_kwh: 110,
+        minimum_energy_kwh: 40,
+        max_charge_kwh_per_hour: 50,
+        max_discharge_kwh_per_hour: 50,
+      },
+    },
+  },
+  {
+    id: "SAMPLE-05",
+    label: "Sample 05: Relay Testing (No Discharge)",
+    description: "Protection relay testing forbids battery discharge between 10:00 and 14:00.",
+    request: {
+      scenario_id: "SAMPLE-05",
+      operator_notes: [
+        "Inverter protection relay testing forbids battery discharge between 10:00 and 14:00.",
+      ],
+      hours: baseHours,
+      battery: {
+        capacity_kwh: 220,
+        initial_energy_kwh: 110,
+        minimum_energy_kwh: 40,
+        max_charge_kwh_per_hour: 50,
+        max_discharge_kwh_per_hour: 50,
+      },
+    },
+  },
 ]
+

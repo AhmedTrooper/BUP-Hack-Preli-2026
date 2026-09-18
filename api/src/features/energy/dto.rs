@@ -238,6 +238,9 @@ mod tests {
             hours: valid_hours(),
             battery,
         };
-        assert!(matches!(req.validate(), Err(AppError::UnprocessableEntity(_))));
+        assert!(matches!(
+            req.validate(),
+            Err(AppError::UnprocessableEntity(_))
+        ));
     }
 }

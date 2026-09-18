@@ -136,7 +136,10 @@ fn try_parse_range_from_slice(slice: &str, delimiters: &[&str]) -> Option<Vec<u8
             let first_part = slice[..delim_idx].trim();
             let first_words: Vec<String> = first_part
                 .split_whitespace()
-                .map(|w| w.trim_matches(|c: char| !c.is_alphanumeric() && c != ':').to_string())
+                .map(|w| {
+                    w.trim_matches(|c: char| !c.is_alphanumeric() && c != ':')
+                        .to_string()
+                })
                 .filter(|w| !w.is_empty())
                 .collect();
             if first_words.is_empty() {
@@ -159,7 +162,10 @@ fn try_parse_range_from_slice(slice: &str, delimiters: &[&str]) -> Option<Vec<u8
             let second_part_raw = &slice[delim_idx + delim.len()..];
             let clean_words: Vec<String> = second_part_raw
                 .split_whitespace()
-                .map(|w| w.trim_matches(|c: char| !c.is_alphanumeric() && c != ':').to_string())
+                .map(|w| {
+                    w.trim_matches(|c: char| !c.is_alphanumeric() && c != ':')
+                        .to_string()
+                })
                 .filter(|w| !w.is_empty())
                 .collect();
             if clean_words.is_empty() {
@@ -188,8 +194,7 @@ fn try_parse_range_from_slice(slice: &str, delimiters: &[&str]) -> Option<Vec<u8
                 }
             }
 
-            if let (Some(h1), Some(h2)) =
-                (parse_hour_str(&first_str), parse_hour_str(&second_part))
+            if let (Some(h1), Some(h2)) = (parse_hour_str(&first_str), parse_hour_str(&second_part))
             {
                 if h1 < h2 {
                     return Some((h1..h2).collect());
@@ -247,11 +252,7 @@ fn extract_kwh_near_keywords(text: &str, keywords: &[&str]) -> Option<f64> {
                 let mut kw_start = 0;
                 while let Some(kw_rel) = text[kw_start..].find(kw) {
                     let kw_pos = kw_start + kw_rel;
-                    let dist = if kw_pos > kwh_idx {
-                        kw_pos - kwh_idx
-                    } else {
-                        kwh_idx - kw_pos
-                    };
+                    let dist = kw_pos.abs_diff(kwh_idx);
                     closest = closest.min(dist);
                     kw_start = kw_pos + kw.len();
                 }
@@ -275,7 +276,11 @@ pub fn fallback_extract_directive(
     let lower = note.to_lowercase();
     let hours = extract_hours_from_note(note);
 
-    if lower.contains("solar") || lower.contains("panel") || lower.contains("pv") || lower.contains("inverter") {
+    if lower.contains("solar")
+        || lower.contains("panel")
+        || lower.contains("pv")
+        || lower.contains("inverter")
+    {
         let mut factor = 1.0;
         if let Some(pct_idx) = lower.find('%') {
             let slice = &lower[..pct_idx];
@@ -303,7 +308,8 @@ pub fn fallback_extract_directive(
             factor = 0.50;
         } else if lower.contains("one third") || lower.contains("1/3") {
             factor = 1.0 / 3.0;
-        } else if lower.contains("one fourth") || lower.contains("quarter") || lower.contains("1/4") {
+        } else if lower.contains("one fourth") || lower.contains("quarter") || lower.contains("1/4")
+        {
             factor = 0.25;
         }
 
@@ -400,7 +406,12 @@ pub fn fallback_extract_directive(
             if let Ok(pct) = digits.parse::<f64>() {
                 val = (pct / 100.0) * capacity_kwh;
             }
-        } else if let Some(extracted) = extract_kwh_near_keywords(&lower, &["battery", "reserve", "capacity", "keep", "maintain", "least"]) {
+        } else if let Some(extracted) = extract_kwh_near_keywords(
+            &lower,
+            &[
+                "battery", "reserve", "capacity", "keep", "maintain", "least",
+            ],
+        ) {
             val = extracted;
         }
 
@@ -435,7 +446,17 @@ pub fn fallback_extract_directive(
     {
         let val = extract_kwh_near_keywords(
             &lower,
-            &["grid", "import", "intake", "transformer", "cap", "limit", "below", "exceed", "maximum"],
+            &[
+                "grid",
+                "import",
+                "intake",
+                "transformer",
+                "cap",
+                "limit",
+                "below",
+                "exceed",
+                "maximum",
+            ],
         )
         .unwrap_or(f64::INFINITY);
 
