@@ -71,13 +71,42 @@ impl Config {
             .and_then(|v| v.parse().ok())
             .unwrap_or(7);
 
-        let llm_provider = env::var("LLM_PROVIDER").unwrap_or_else(|_| "openai".to_string());
-        let llm_model = env::var("LLM_MODEL").unwrap_or_else(|_| "gpt-4o-mini".to_string());
-        let llm_api_key = env::var("LLM_API_KEY")
-            .ok()
-            .or_else(|| env::var("OPENAI_API_KEY").ok())
-            .or_else(|| env::var("GEMINI_API_KEY").ok())
-            .or_else(|| env::var("ANTHROPIC_API_KEY").ok());
+        let explicit_provider = env::var("LLM_PROVIDER").ok();
+        let (llm_provider, llm_api_key, default_model) = if let Some(prov) = explicit_provider {
+            let key = env::var("LLM_API_KEY")
+                .ok()
+                .or_else(|| env::var("DEEPSEEK_API_KEY").ok())
+                .or_else(|| env::var("OPENAI_API_KEY").ok())
+                .or_else(|| env::var("GEMINI_API_KEY").ok())
+                .or_else(|| env::var("ANTHROPIC_API_KEY").ok())
+                .or_else(|| env::var("GROQ_API_KEY").ok());
+            let def_m = match prov.trim().to_lowercase().as_str() {
+                "deepseek" | "deep-seek" => "deepseek-chat",
+                "gemini" | "google" => "gemini-2.0-flash",
+                "anthropic" | "claude" => "claude-3-5-haiku-latest",
+                _ => "gpt-4o-mini",
+            };
+            (prov, key, def_m)
+        } else if let Ok(key) = env::var("DEEPSEEK_API_KEY") {
+            ("deepseek".to_string(), Some(key), "deepseek-chat")
+        } else if let Ok(key) = env::var("GEMINI_API_KEY") {
+            ("gemini".to_string(), Some(key), "gemini-2.0-flash")
+        } else if let Ok(key) = env::var("ANTHROPIC_API_KEY") {
+            ("anthropic".to_string(), Some(key), "claude-3-5-haiku-latest")
+        } else if let Ok(key) = env::var("GROQ_API_KEY") {
+            ("groq".to_string(), Some(key), "llama-3.3-70b-versatile")
+        } else if let Ok(key) = env::var("OPENAI_API_KEY") {
+            ("openai".to_string(), Some(key), "gpt-4o-mini")
+        } else if let Ok(key) = env::var("LLM_API_KEY") {
+            ("openai".to_string(), Some(key), "gpt-4o-mini")
+        } else {
+            ("openai".to_string(), None, "gpt-4o-mini")
+        };
+
+        let llm_model = env::var("LLM_MODEL")
+            .or_else(|_| env::var("DEEPSEEK_MODEL"))
+            .or_else(|_| env::var("MODEL"))
+            .unwrap_or_else(|_| default_model.to_string());
         let llm_base_url = env::var("LLM_BASE_URL").ok();
 
         Self {
@@ -124,5 +153,22 @@ mod tests {
         assert_eq!(config.jwt_access_expiration_minutes, 15);
         assert!(!config.llm_provider.is_empty());
         assert!(!config.llm_model.is_empty());
+    }
+
+    #[test]
+    fn test_deepseek_api_key_auto_inference() {
+        // Test that setting DEEPSEEK_API_KEY auto-infers provider and model
+        unsafe {
+            std::env::remove_var("LLM_PROVIDER");
+            std::env::remove_var("LLM_API_KEY");
+            std::env::set_var("DEEPSEEK_API_KEY", "sk-test-deepseek-key");
+        }
+        let config = Config::from_env();
+        assert_eq!(config.llm_provider, "deepseek");
+        assert_eq!(config.llm_model, "deepseek-chat");
+        assert_eq!(config.llm_api_key, Some("sk-test-deepseek-key".to_string()));
+        unsafe {
+            std::env::remove_var("DEEPSEEK_API_KEY");
+        }
     }
 }
