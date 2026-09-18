@@ -30,20 +30,20 @@ pub struct OptimizeEnergyRequest {
 impl OptimizeEnergyRequest {
     pub fn validate(&self) -> Result<(), AppError> {
         if self.scenario_id.trim().is_empty() {
-            return Err(AppError::UnprocessableEntity(
+            return Err(AppError::BadRequest(
                 "scenario_id must not be empty".to_string(),
             ));
         }
 
         if self.operator_notes.is_empty() || self.operator_notes.len() > 3 {
-            return Err(AppError::UnprocessableEntity(
+            return Err(AppError::BadRequest(
                 "operator_notes must contain 1 to 3 non-empty strings".to_string(),
             ));
         }
 
         for (i, note) in self.operator_notes.iter().enumerate() {
             if note.trim().is_empty() {
-                return Err(AppError::UnprocessableEntity(format!(
+                return Err(AppError::BadRequest(format!(
                     "operator_notes[{}] cannot be empty",
                     i
                 )));
@@ -51,7 +51,7 @@ impl OptimizeEnergyRequest {
         }
 
         if self.hours.len() != 24 {
-            return Err(AppError::UnprocessableEntity(format!(
+            return Err(AppError::BadRequest(format!(
                 "hours must contain exactly 24 hourly data points, received {}",
                 self.hours.len()
             )));
@@ -60,13 +60,13 @@ impl OptimizeEnergyRequest {
         let mut seen_hours = HashSet::new();
         for (i, h) in self.hours.iter().enumerate() {
             if h.hour > 23 {
-                return Err(AppError::UnprocessableEntity(format!(
+                return Err(AppError::BadRequest(format!(
                     "hours[{}].hour is {}, must be between 0 and 23",
                     i, h.hour
                 )));
             }
             if !seen_hours.insert(h.hour) {
-                return Err(AppError::UnprocessableEntity(format!(
+                return Err(AppError::BadRequest(format!(
                     "Duplicate hour {} detected in hours array",
                     h.hour
                 )));
@@ -212,7 +212,7 @@ mod tests {
             hours: valid_hours(),
             battery: valid_battery(),
         };
-        assert!(req.validate().is_err());
+        assert!(matches!(req.validate(), Err(AppError::BadRequest(_))));
     }
 
     #[test]
@@ -225,7 +225,7 @@ mod tests {
             hours,
             battery: valid_battery(),
         };
-        assert!(req.validate().is_err());
+        assert!(matches!(req.validate(), Err(AppError::BadRequest(_))));
     }
 
     #[test]
@@ -238,6 +238,6 @@ mod tests {
             hours: valid_hours(),
             battery,
         };
-        assert!(req.validate().is_err());
+        assert!(matches!(req.validate(), Err(AppError::UnprocessableEntity(_))));
     }
 }

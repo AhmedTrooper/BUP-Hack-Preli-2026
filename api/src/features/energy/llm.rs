@@ -72,15 +72,20 @@ pub async fn interpret_notes_with_llm(
                 .join("\n")
         );
 
-        if let Ok(response_text) =
-            complete_prompt(config, Some(SYSTEM_PROMPT), &user_prompt, Some(0.0)).await
-            && let Some(mut parsed) = parse_llm_json_response(&response_text)
-            && parsed.len() == notes.len()
-        {
-            for interp in parsed.iter_mut() {
-                validate_and_normalize_directive(interp, capacity_kwh);
+        for attempt in 0..2 {
+            if attempt > 0 {
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
             }
-            return parsed;
+            if let Ok(response_text) =
+                complete_prompt(config, Some(SYSTEM_PROMPT), &user_prompt, Some(0.0)).await
+                && let Some(mut parsed) = parse_llm_json_response(&response_text)
+                && parsed.len() == notes.len()
+            {
+                for interp in parsed.iter_mut() {
+                    validate_and_normalize_directive(interp, capacity_kwh);
+                }
+                return parsed;
+            }
         }
     }
 

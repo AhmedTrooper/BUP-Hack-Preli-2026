@@ -130,66 +130,141 @@ fn parse_hour_str(s: &str) -> Option<u8> {
     None
 }
 
+fn try_parse_range_from_slice(slice: &str, delimiters: &[&str]) -> Option<Vec<u8>> {
+    for delim in delimiters {
+        if let Some(delim_idx) = slice.find(delim) {
+            let first_part = slice[..delim_idx].trim();
+            let first_words: Vec<String> = first_part
+                .split_whitespace()
+                .map(|w| w.trim_matches(|c: char| !c.is_alphanumeric() && c != ':').to_string())
+                .filter(|w| !w.is_empty())
+                .collect();
+            if first_words.is_empty() {
+                continue;
+            }
+
+            let first_token = if first_words.len() >= 2
+                && (first_words[first_words.len() - 1].eq_ignore_ascii_case("am")
+                    || first_words[first_words.len() - 1].eq_ignore_ascii_case("pm"))
+            {
+                format!(
+                    "{} {}",
+                    first_words[first_words.len() - 2],
+                    first_words[first_words.len() - 1]
+                )
+            } else {
+                first_words[first_words.len() - 1].clone()
+            };
+
+            let second_part_raw = &slice[delim_idx + delim.len()..];
+            let clean_words: Vec<String> = second_part_raw
+                .split_whitespace()
+                .map(|w| w.trim_matches(|c: char| !c.is_alphanumeric() && c != ':').to_string())
+                .filter(|w| !w.is_empty())
+                .collect();
+            if clean_words.is_empty() {
+                continue;
+            }
+
+            let mut second_part = clean_words[0].clone();
+            if clean_words.len() > 1
+                && (clean_words[1].eq_ignore_ascii_case("am")
+                    || clean_words[1].eq_ignore_ascii_case("pm"))
+            {
+                second_part.push(' ');
+                second_part.push_str(&clean_words[1]);
+            }
+
+            let mut first_str = first_token.clone();
+            if !first_str.contains("am")
+                && !first_str.contains("pm")
+                && !first_str.contains("noon")
+                && !first_str.contains("midnight")
+            {
+                if second_part.contains("pm") {
+                    first_str.push_str(" pm");
+                } else if second_part.contains("am") {
+                    first_str.push_str(" am");
+                }
+            }
+
+            if let (Some(h1), Some(h2)) =
+                (parse_hour_str(&first_str), parse_hour_str(&second_part))
+            {
+                if h1 < h2 {
+                    return Some((h1..h2).collect());
+                } else if h1 > h2 {
+                    let mut hrs: Vec<u8> = (h1..24).chain(0..h2).collect();
+                    hrs.sort();
+                    return Some(hrs);
+                }
+            }
+        }
+    }
+    None
+}
+
 pub fn extract_hours_from_note(note: &str) -> Vec<u8> {
     let normalized = note.replace(['–', '—'], "-");
     let lower = normalized.to_lowercase();
 
     let delimiters = ["until", "through", "to", "and", "-"];
-    let prefix_markers = ["from", "between", "during"];
+    let prefix_markers = ["from", "between", "during", "in", "at"];
 
     for prefix in prefix_markers {
         if let Some(start_idx) = lower.find(prefix) {
             let after_prefix = &lower[start_idx + prefix.len()..];
-            for delim in delimiters {
-                if let Some(delim_idx) = after_prefix.find(delim) {
-                    let first_part = after_prefix[..delim_idx].trim();
-                    let second_part_raw = &after_prefix[delim_idx + delim.len()..];
-                    let clean_words: Vec<String> = second_part_raw
-                        .split_whitespace()
-                        .map(|w| {
-                            w.trim_matches(|c: char| !c.is_alphanumeric() && c != ':')
-                                .to_string()
-                        })
-                        .filter(|w| !w.is_empty())
-                        .collect();
-                    if clean_words.is_empty() {
-                        continue;
-                    }
-
-                    let mut second_part = clean_words[0].clone();
-                    if clean_words.len() > 1
-                        && (clean_words[1].eq_ignore_ascii_case("am")
-                            || clean_words[1].eq_ignore_ascii_case("pm"))
-                    {
-                        second_part.push(' ');
-                        second_part.push_str(&clean_words[1]);
-                    }
-
-                    let mut first_str = first_part.to_string();
-                    if !first_str.contains("am")
-                        && !first_str.contains("pm")
-                        && !first_str.contains("noon")
-                        && !first_str.contains("midnight")
-                    {
-                        if second_part.contains("pm") {
-                            first_str.push_str(" pm");
-                        } else if second_part.contains("am") {
-                            first_str.push_str(" am");
-                        }
-                    }
-
-                    if let (Some(h1), Some(h2)) =
-                        (parse_hour_str(&first_str), parse_hour_str(&second_part))
-                        && h1 < h2
-                    {
-                        return (h1..h2).collect();
-                    }
-                }
+            if let Some(res) = try_parse_range_from_slice(after_prefix, &delimiters) {
+                return res;
             }
         }
     }
 
+    if let Some(res) = try_parse_range_from_slice(&lower, &delimiters) {
+        return res;
+    }
+
     Vec::new()
+}
+
+fn extract_kwh_near_keywords(text: &str, keywords: &[&str]) -> Option<f64> {
+    let mut best_val = None;
+    let mut min_dist = usize::MAX;
+
+    let mut start = 0;
+    while let Some(rel_idx) = text[start..].find("kwh") {
+        let kwh_idx = start + rel_idx;
+        let slice = &text[..kwh_idx].trim_end();
+        let digits: String = slice
+            .chars()
+            .rev()
+            .take_while(|c| c.is_ascii_digit() || *c == '.')
+            .collect();
+        let digits: String = digits.chars().rev().collect();
+        if let Ok(val) = digits.parse::<f64>() {
+            let mut closest = usize::MAX;
+            for kw in keywords {
+                let mut kw_start = 0;
+                while let Some(kw_rel) = text[kw_start..].find(kw) {
+                    let kw_pos = kw_start + kw_rel;
+                    let dist = if kw_pos > kwh_idx {
+                        kw_pos - kwh_idx
+                    } else {
+                        kwh_idx - kw_pos
+                    };
+                    closest = closest.min(dist);
+                    kw_start = kw_pos + kw.len();
+                }
+            }
+            if closest < min_dist {
+                min_dist = closest;
+                best_val = Some(val);
+            }
+        }
+        start = kwh_idx + 3;
+    }
+
+    best_val
 }
 
 pub fn fallback_extract_directive(
@@ -200,14 +275,36 @@ pub fn fallback_extract_directive(
     let lower = note.to_lowercase();
     let hours = extract_hours_from_note(note);
 
-    if lower.contains("solar") || lower.contains("panel") {
+    if lower.contains("solar") || lower.contains("panel") || lower.contains("pv") || lower.contains("inverter") {
         let mut factor = 1.0;
-        if lower.contains("25%") {
-            factor = 0.25;
-        } else if lower.contains("80% reduction") {
-            factor = 0.20;
-        } else if lower.contains("half") {
+        if let Some(pct_idx) = lower.find('%') {
+            let slice = &lower[..pct_idx];
+            let digits: String = slice
+                .chars()
+                .rev()
+                .take_while(|c| c.is_ascii_digit() || *c == '.')
+                .collect();
+            let digits: String = digits.chars().rev().collect();
+            if let Ok(pct) = digits.parse::<f64>() {
+                if lower.contains("reduction")
+                    || lower.contains("reduce")
+                    || lower.contains("cut")
+                    || lower.contains("loss")
+                    || lower.contains("lost")
+                    || lower.contains("drop by")
+                    || lower.contains("down by")
+                {
+                    factor = ((100.0 - pct) / 100.0).clamp(0.0, 1.0);
+                } else {
+                    factor = (pct / 100.0).clamp(0.0, 1.0);
+                }
+            }
+        } else if lower.contains("half") || lower.contains("halve") {
             factor = 0.50;
+        } else if lower.contains("one third") || lower.contains("1/3") {
+            factor = 1.0 / 3.0;
+        } else if lower.contains("one fourth") || lower.contains("quarter") || lower.contains("1/4") {
+            factor = 0.25;
         }
 
         let mut interp = DirectiveInterpretation {
@@ -230,7 +327,10 @@ pub fn fallback_extract_directive(
         && (lower.contains("isolated")
             || lower.contains("unavailable")
             || lower.contains("disabled")
-            || lower.contains("outage"))
+            || lower.contains("outage")
+            || lower.contains("stop")
+            || lower.contains("prohibit")
+            || lower.contains("no charge"))
     {
         let mut interp = DirectiveInterpretation {
             note_index,
@@ -251,7 +351,11 @@ pub fn fallback_extract_directive(
     if (lower.contains("discharge") || lower.contains("discharging"))
         && (lower.contains("not discharge")
             || lower.contains("relay testing")
-            || lower.contains("stop"))
+            || lower.contains("stop")
+            || lower.contains("prohibit")
+            || lower.contains("prevent")
+            || lower.contains("disabled")
+            || lower.contains("isolated"))
     {
         let mut interp = DirectiveInterpretation {
             note_index,
@@ -272,8 +376,17 @@ pub fn fallback_extract_directive(
     if (lower.contains("battery")
         || lower.contains("capacity")
         || lower.contains("stored")
+        || lower.contains("reserve")
+        || lower.contains("soc")
+        || lower.contains("energy level")
         || lower.contains("remain"))
-        && (lower.contains("at least") || lower.contains("keep") || lower.contains("requires"))
+        && (lower.contains("at least")
+            || lower.contains("keep")
+            || lower.contains("requires")
+            || lower.contains("maintain")
+            || lower.contains("minimum")
+            || lower.contains("reserve")
+            || lower.contains("floor"))
     {
         let mut val = 0.0;
         if let Some(pct_idx) = lower.find('%') {
@@ -281,23 +394,14 @@ pub fn fallback_extract_directive(
             let digits: String = slice
                 .chars()
                 .rev()
-                .take_while(|c| c.is_ascii_digit())
+                .take_while(|c| c.is_ascii_digit() || *c == '.')
                 .collect();
             let digits: String = digits.chars().rev().collect();
             if let Ok(pct) = digits.parse::<f64>() {
                 val = (pct / 100.0) * capacity_kwh;
             }
-        } else if let Some(kwh_idx) = lower.find("kwh") {
-            let slice = &lower[..kwh_idx].trim_end();
-            let digits: String = slice
-                .chars()
-                .rev()
-                .take_while(|c| c.is_ascii_digit() || *c == '.')
-                .collect();
-            let digits: String = digits.chars().rev().collect();
-            if let Ok(kwh) = digits.parse::<f64>() {
-                val = kwh;
-            }
+        } else if let Some(extracted) = extract_kwh_near_keywords(&lower, &["battery", "reserve", "capacity", "keep", "maintain", "least"]) {
+            val = extracted;
         }
 
         let mut interp = DirectiveInterpretation {
@@ -318,27 +422,22 @@ pub fn fallback_extract_directive(
 
     if (lower.contains("grid import")
         || lower.contains("grid intake")
+        || lower.contains("grid")
         || lower.contains("transformer")
         || lower.contains("substation")
         || lower.contains("feeder"))
         && (lower.contains("not exceed")
             || lower.contains("limit")
             || lower.contains("stay at or below")
-            || lower.contains("cap"))
+            || lower.contains("cap")
+            || lower.contains("maximum")
+            || lower.contains("ceiling"))
     {
-        let mut val = f64::INFINITY;
-        if let Some(kwh_idx) = lower.find("kwh") {
-            let slice = &lower[..kwh_idx].trim_end();
-            let digits: String = slice
-                .chars()
-                .rev()
-                .take_while(|c| c.is_ascii_digit() || *c == '.')
-                .collect();
-            let digits: String = digits.chars().rev().collect();
-            if let Ok(kwh) = digits.parse::<f64>() {
-                val = kwh;
-            }
-        }
+        let val = extract_kwh_near_keywords(
+            &lower,
+            &["grid", "import", "intake", "transformer", "cap", "limit", "below", "exceed", "maximum"],
+        )
+        .unwrap_or(f64::INFINITY);
 
         let mut interp = DirectiveInterpretation {
             note_index,
@@ -447,5 +546,33 @@ mod tests {
         assert_eq!(interp.directive_type, "no_op");
         assert!(!interp.applies);
         assert!(interp.structured_adjustment.is_none());
+    }
+
+    #[test]
+    fn test_extract_hours_without_prefix() {
+        let note = "Battery discharge prohibited 6 PM - 9 PM for relay testing.";
+        let hours = extract_hours_from_note(note);
+        assert_eq!(hours, vec![18, 19, 20]);
+    }
+
+    #[test]
+    fn test_fallback_solar_reduction_generic_percentage() {
+        let note = "Solar output cut by 40% between 11 AM and 2 PM.";
+        let interp = fallback_extract_directive(note, 0, 200.0);
+        assert_eq!(interp.directive_type, "solar_reduction");
+        assert!(interp.applies);
+        let adj = interp.structured_adjustment.unwrap();
+        assert_eq!(adj.hours, Some(vec![11, 12, 13]));
+        assert!((adj.factor.unwrap() - 0.60).abs() < 1e-4);
+    }
+
+    #[test]
+    fn test_fallback_max_grid_kwh_near_keyword() {
+        let note = "Discharge 50 kWh max, but grid import cap is 120 kWh from 6 PM to 9 PM.";
+        let interp = fallback_extract_directive(note, 0, 200.0);
+        assert_eq!(interp.directive_type, "max_grid_window");
+        let adj = interp.structured_adjustment.unwrap();
+        assert_eq!(adj.hours, Some(vec![18, 19, 20]));
+        assert_eq!(adj.max_grid_kwh, Some(120.0));
     }
 }

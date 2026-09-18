@@ -215,7 +215,7 @@ fn verify_plan_invariants(
     max_discharge: &[f64; 24],
     max_grid: &[f64; 24],
 ) -> Result<(), AppError> {
-    const TOLERANCE: f64 = 0.05;
+    const TOLERANCE: f64 = 0.02;
 
     let mut prev_energy = req.battery.initial_energy_kwh;
 
