@@ -596,4 +596,101 @@ mod tests {
         assert_eq!(adj.hours, Some(vec![18, 19, 20]));
         assert_eq!(adj.max_grid_kwh, Some(120.0));
     }
+
+    #[test]
+    fn test_sample_cases_fallback_extraction_all_10() {
+        let file_content =
+            std::fs::read_to_string("../data/BUP_CSE_FEST_2026_Preli_Public_Sample_Cases.json")
+                .or_else(|_| {
+                    std::fs::read_to_string("data/BUP_CSE_FEST_2026_Preli_Public_Sample_Cases.json")
+                })
+                .expect("Sample cases file should be present");
+
+        let json_val: serde_json::Value = serde_json::from_str(&file_content).unwrap();
+        let cases = json_val["cases"].as_array().unwrap();
+
+        for case in cases {
+            let id = case["id"].as_str().unwrap();
+            let notes = case["input"]["operator_notes"].as_array().unwrap();
+            let capacity = case["input"]["battery"]["capacity_kwh"].as_f64().unwrap();
+            let exp_dirs = case["expected_output"]["directive_interpretation"]
+                .as_array()
+                .unwrap();
+
+            for (idx, (note_val, exp_val)) in notes.iter().zip(exp_dirs.iter()).enumerate() {
+                let note_str = note_val.as_str().unwrap();
+                let extracted = fallback_extract_directive(note_str, idx, capacity);
+
+                let exp_type = exp_val["directive_type"].as_str().unwrap();
+                let exp_applies = exp_val["applies"].as_bool().unwrap();
+
+                assert_eq!(
+                    extracted.directive_type, exp_type,
+                    "{} Note {}: type mismatch got {}, exp {}",
+                    id, idx, extracted.directive_type, exp_type
+                );
+                assert_eq!(
+                    extracted.applies, exp_applies,
+                    "{} Note {}: applies mismatch",
+                    id, idx
+                );
+
+                if let Some(exp_adj) = exp_val
+                    .get("structured_adjustment")
+                    .filter(|v| !v.is_null())
+                {
+                    let act_adj = extracted
+                        .structured_adjustment
+                        .expect("Expected adjustment");
+                    if let Some(exp_hours) = exp_adj.get("hours").and_then(|h| h.as_array()) {
+                        let exp_h: Vec<u8> = exp_hours
+                            .iter()
+                            .map(|v| v.as_u64().unwrap() as u8)
+                            .collect();
+                        assert_eq!(
+                            act_adj.hours,
+                            Some(exp_h),
+                            "{} Note {}: hours mismatch",
+                            id,
+                            idx
+                        );
+                    }
+                    if let Some(exp_f) = exp_adj.get("factor").and_then(|f| f.as_f64()) {
+                        let act_f = act_adj.factor.expect("Expected factor");
+                        assert!(
+                            (act_f - exp_f).abs() < 1e-4,
+                            "{} Note {}: factor mismatch got {}, exp {}",
+                            id,
+                            idx,
+                            act_f,
+                            exp_f
+                        );
+                    }
+                    if let Some(exp_r) = exp_adj.get("minimum_energy_kwh").and_then(|r| r.as_f64())
+                    {
+                        let act_r = act_adj.minimum_energy_kwh.expect("Expected reserve");
+                        assert!(
+                            (act_r - exp_r).abs() < 1e-4,
+                            "{} Note {}: reserve mismatch got {}, exp {}",
+                            id,
+                            idx,
+                            act_r,
+                            exp_r
+                        );
+                    }
+                    if let Some(exp_g) = exp_adj.get("max_grid_kwh").and_then(|g| g.as_f64()) {
+                        let act_g = act_adj.max_grid_kwh.expect("Expected max grid");
+                        assert!(
+                            (act_g - exp_g).abs() < 1e-4,
+                            "{} Note {}: max grid mismatch got {}, exp {}",
+                            id,
+                            idx,
+                            act_g,
+                            exp_g
+                        );
+                    }
+                }
+            }
+        }
+    }
 }
