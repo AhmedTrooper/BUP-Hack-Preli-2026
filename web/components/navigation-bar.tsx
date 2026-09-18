@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAppStore } from "@/lib/store"
+import { NEXT_PUBLIC_API_URL, NEXT_PUBLIC_WS_URL } from "@/lib/env"
 
 export function NavigationBar() {
   const pathname = usePathname()
@@ -64,7 +65,8 @@ export function NavigationBar() {
           </Link>
 
           <div
-            className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium border ${
+            title={`REST API: ${NEXT_PUBLIC_API_URL}\nWebSocket: ${NEXT_PUBLIC_WS_URL}`}
+            className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium border cursor-help ${
               apiConnected === true
                 ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                 : apiConnected === false

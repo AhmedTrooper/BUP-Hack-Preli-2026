@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "motion/react"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { useAppStore } from "@/lib/store"
 import { NavigationBar } from "@/components/navigation-bar"
+import { BackendTelemetryBadge } from "@/components/backend-telemetry-badge"
 import { EnergyPanel } from "@/features/energy/components/energy-panel"
 
 export default function HomePage() {
@@ -55,7 +56,12 @@ function GridWiseDashboard() {
 
       <NavigationBar />
 
-      <main className="mx-auto max-w-7xl px-6 py-8 space-y-8">
+      <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
+        {/* Judge Telemetry & Active Backend Endpoints */}
+        <section>
+          <BackendTelemetryBadge />
+        </section>
+
         {/* Onboarding & Purpose Hero Banner */}
         <section className="rounded-2xl border bg-gradient-to-br from-card to-muted/40 p-6 shadow-sm">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

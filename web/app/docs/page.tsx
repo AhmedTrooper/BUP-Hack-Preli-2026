@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { NavigationBar } from "@/components/navigation-bar"
+import { NEXT_PUBLIC_API_URL, NEXT_PUBLIC_WS_URL } from "@/lib/env"
 
 export default function DocsPage() {
   return (
@@ -278,6 +279,24 @@ export default function DocsPage() {
             API Endpoints & Integration
           </h2>
 
+          {/* Live Instance Endpoints Callout */}
+          <div className="rounded-xl border bg-muted/30 p-4 space-y-2 text-xs font-mono">
+            <div className="text-foreground font-semibold flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Live Instance Environment Variables:</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+              <div className="rounded border bg-background p-2">
+                <span className="text-muted-foreground block text-[10px]">REST API (NEXT_PUBLIC_API_URL):</span>
+                <span className="text-primary font-bold">{NEXT_PUBLIC_API_URL}</span>
+              </div>
+              <div className="rounded border bg-background p-2">
+                <span className="text-muted-foreground block text-[10px]">WebSocket Stream (NEXT_PUBLIC_WS_URL):</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">{NEXT_PUBLIC_WS_URL}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-4 text-xs">
             {/* Health Endpoint */}
             <div className="rounded-xl border bg-card p-5 space-y-2">
@@ -310,7 +329,7 @@ export default function DocsPage() {
 
               <div className="font-semibold text-foreground text-[11px]">Example cURL Request:</div>
               <pre className="rounded-lg bg-muted/40 p-3 font-mono text-[11px] overflow-x-auto text-foreground">
-{`curl -X POST https://your-app.up.railway.app/optimize-energy \\
+{`curl -X POST ${NEXT_PUBLIC_API_URL}/optimize-energy \\
   -H "Content-Type: application/json" \\
   -d '{
     "scenario_id": "SAMPLE-01",

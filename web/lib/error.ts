@@ -1,3 +1,5 @@
+import { NEXT_PUBLIC_API_URL } from "@/lib/env"
+
 export class ApiError extends Error {
   public readonly status: number
   public readonly code: string
@@ -23,8 +25,7 @@ export class ApiError extends Error {
   }
 }
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+const API_BASE_URL = NEXT_PUBLIC_API_URL
 
 export async function apiFetch<T>(
   endpoint: string,
