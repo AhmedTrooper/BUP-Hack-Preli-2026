@@ -4,8 +4,9 @@ help: ## Show this help message
 	@echo "Available commands:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
-setup: ## Prepare environment files and initial config
+setup: ## Prepare environment files and install dependencies
 	@if [ ! -f .env ]; then cp .env.example .env && echo "Created .env from .env.example"; else echo ".env already exists"; fi
+	bun install --cwd web
 
 docker-up: ## Start Docker services (PostgreSQL, Redis, NATS, MinIO)
 	docker compose up -d

@@ -146,7 +146,7 @@ Run commands using `make <target>`:
 | Command | Description |
 | :--- | :--- |
 | `make help` | Show available commands |
-| `make setup` | Create `.env` from `.env.example` if it does not exist |
+| `make setup` | Create `.env` from `.env.example` if it does not exist and install web dependencies |
 | `make docker-up` | Start Docker services (PostgreSQL, Redis, NATS, MinIO) |
 | `make docker-down` | Stop Docker services |
 | `make docker-logs` | Follow container logs |

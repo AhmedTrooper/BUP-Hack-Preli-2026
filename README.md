@@ -100,7 +100,7 @@ A high-performance full-stack platform built for event-driven workflows, object 
    ```bash
    make setup
    ```
-   Creates the local `.env` configuration file from `.env.example`.
+   Creates the local `.env` configuration file from `.env.example` and installs frontend dependencies.
 
 2. **Start Infrastructure Services**:
    ```bash
@@ -127,7 +127,7 @@ A high-performance full-stack platform built for event-driven workflows, object 
 | Command | Description |
 | :--- | :--- |
 | `make help` | View available commands |
-| `make setup` | Initialize local `.env` configuration |
+| `make setup` | Initialize local `.env` configuration and install web dependencies |
 | `make docker-up` | Start all infrastructure containers in the background |
 | `make docker-down` | Stop all running infrastructure containers |
 | `make docker-logs` | Stream logs from infrastructure containers |
